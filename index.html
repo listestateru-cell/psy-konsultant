@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Психолог-консультант</title>
+<style>
+:root{--bg:#f6f4ef;--ink:#1d1b18;--mute:#77716a}
+@media (prefers-color-scheme:dark){:root{--bg:#151412;--ink:#eeeae3;--mute:#9b948a}}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 -apple-system,system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;padding:16px;box-sizing:border-box;text-align:center}
+p{color:var(--mute)}
+</style></head><body><div><h1>Психолог-консультант</h1><p id="m">Открываю…</p></div>
+<script>
+// Ключ после # не уходит на сервер GitHub. Текущий адрес приложения бот кладёт в url.txt.
+const key = location.hash.slice(1), m = document.getElementById('m');
+if (!/^[A-Za-z0-9_-]{8,}$/.test(key)) m.textContent = 'Ссылка неполная. Возьми свою в боте: кнопка «🌐 Веб-версия».';
+else fetch('https://api.github.com/repos/listestateru-cell/psy-konsultant/contents/url.txt?t=' + Date.now(),
+           {headers: {Accept: 'application/vnd.github.raw'}, cache: 'no-store'})
+  .then(r => r.ok ? r.text() : Promise.reject())
+  .then(u => location.replace(u.trim() + '/u/' + key + '/'))
+  .catch(() => m.textContent = 'Не получилось открыть. Возможно, компьютер с ботом выключен — попробуй позже.');
+</script></body></html>
