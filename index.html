@@ -14,7 +14,7 @@ button{font:inherit;border:1px solid var(--mute);background:none;color:var(--ink
 // Ключ после # не уходит на сервер GitHub. Текущий адрес приложения бот кладёт в url.txt.
 // Перед переходом проверяем, что адрес жив: после сна компьютера туннель бывает мёртв,
 // бот поднимает новый в течение пары минут — поэтому несколько попыток с перечитыванием url.txt.
-const key = location.hash.slice(1), m = document.getElementById('m'), again = document.getElementById('again');
+const [key, tab] = location.hash.slice(1).split('~'), m = document.getElementById('m'), again = document.getElementById('again');
 const RAW = 'https://api.github.com/repos/listestateru-cell/psy-konsultant/contents/url.txt';
 const timeout = (ms) => new Promise((_, no) => setTimeout(() => no('timeout'), ms));
 async function tryOpen(attempt) {
@@ -24,7 +24,7 @@ async function tryOpen(attempt) {
     if (!/^https:\/\//.test(u)) throw 'no url';
     const r = await Promise.race([fetch(u + '/healthz', {cache: 'no-store'}), timeout(8000)]);
     if (!r.ok) throw 'down';
-    location.replace(u + '/u/' + key + '/');
+    location.replace(u + '/u/' + key + '/' + (tab ? '#' + tab : ''));
   } catch (_) {
     if (attempt < 12) {
       m.textContent = attempt ? `Компьютер с ботом пока не отвечает, жду… (попытка ${attempt + 1} из 12)` : 'Соединяюсь…';
