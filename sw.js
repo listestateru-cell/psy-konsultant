@@ -2,13 +2,15 @@
 'use strict';
 const ROOT_URL = new URL('./', self.registration.scope);
 const CACHE_PREFIX = 'fukushu-shell-' + encodeURIComponent(ROOT_URL.pathname) + '-';
-const CACHE_NAME = CACHE_PREFIX + '58a487dd24e380fc4ade';
+const CACHE_NAME = CACHE_PREFIX + 'bdc8a938526efec20020';
 const PRECACHE = ["./", "./manifest.webmanifest", "./static/THIRD_PARTY_NOTICES.txt", "./static/app.css", "./static/chunks/chunk-3P3NBJ43.js", "./static/chunks/chunk-3P3NBJ43.js.LEGAL.txt", "./static/connection.js", "./static/effects-image.js", "./static/effects-image.js.LEGAL.txt", "./static/effects.css", "./static/effects.js", "./static/effects.js.LEGAL.txt", "./static/icons/icon-180.png", "./static/icons/icon-192.png", "./static/icons/icon-512.png", "./static/icons/icon.svg", "./static/install.css", "./static/mobile.css", "./static/mobile.js", "./static/telegram-web-app.js"];
 const SHELL_URL = ROOT_URL.href;
 const ASSET_URLS = new Set(PRECACHE.filter(path => path !== './').map(path => new URL(path, ROOT_URL).href));
 
 self.addEventListener('install', event => {
-  event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(PRECACHE)).then(() => self.skipWaiting()));
+  // Replace any still-cached legacy redirect at the stable root URL as well.
+  const freshResources = PRECACHE.map(path => new Request(new URL(path, ROOT_URL).href, {cache: 'reload'}));
+  event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(freshResources)).then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', event => {
   event.waitUntil(caches.keys().then(names => Promise.all(names.filter(name => name.startsWith(CACHE_PREFIX) && name !== CACHE_NAME).map(name => caches.delete(name)))).then(() => self.clients.claim()));
@@ -23,7 +25,7 @@ self.addEventListener('fetch', event => {
   if (navigation) {
     event.respondWith((async () => {
       try {
-        const response = await fetch(request);
+        const response = await fetch(request, {cache: 'no-cache'});
         if (response.ok && (response.headers.get('Content-Type') || '').includes('text/html')) {
           const cache = await caches.open(CACHE_NAME);
           await cache.put(SHELL_URL, response.clone());
