@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs><linearGradient id="purple" x2="1" y2="1"><stop stop-color="#a88bff"/><stop offset="1" stop-color="#6543ce"/></linearGradient></defs>
+  <rect width="512" height="512" rx="108" fill="url(#purple)"/>
+  <text x="256" y="344" text-anchor="middle" fill="white" font-family="Hiragino Sans, sans-serif" font-size="290" font-weight="600">復</text>
+</svg>

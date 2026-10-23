@@ -1,0 +1,31 @@
+/* Locally bundled Libraries.dev effects. Native controls remain the hit targets. */
+:root{--fx-accent:var(--acc,#7357df);--fx-violet:#b7a4ff;--fx-teal:#9bd5c7;--fx-liquid:color-mix(in srgb,var(--acc,#7357df) 20%,transparent)}
+.fx-host{isolation:isolate}
+.fx-position{position:relative}
+.fx-island,.fx-island *{pointer-events:none!important;user-select:none}
+.fx-layer{position:absolute!important;inset:0;display:block;border-radius:inherit;overflow:visible;z-index:1}
+.fx-inline{display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;flex:0 0 auto}
+.fx-orb{width:24px;height:24px;margin-inline:6px;vertical-align:middle}
+.home-orb>.fx-orb,[data-size="64"]>.fx-orb{width:64px;height:64px;margin:0}
+.fx-avatar{width:42px;height:42px;overflow:visible}
+.fx-placeholder{display:block;width:100%;height:100%;border-radius:inherit}
+.fx-beam{z-index:-1;opacity:.85}.fx-beam>div,.fx-voice>div,.fx-metal>div{width:100%;height:100%;border-radius:inherit}
+/* Explicit native label layer also stays above the WebGL canvas on WebKit. */
+.fx-metal{z-index:0;border-radius:inherit;opacity:.75;overflow:hidden}
+.fx-button-label{position:relative;z-index:2;display:inline-block;pointer-events:none;transform:translateZ(0)}
+.fx-liquid{z-index:0;overflow:hidden;border-radius:16px;opacity:.7}
+.fx-liquid>div{position:absolute!important;inset:0}
+.fx-input-frame{position:relative;display:block;width:100%;border-radius:14px;isolation:isolate}
+.fx-input-frame textarea{display:block;position:relative;z-index:0}
+.fx-recording{box-shadow:0 0 0 2px color-mix(in srgb,var(--fx-accent) 55%,transparent),0 0 24px color-mix(in srgb,var(--fx-violet) 18%,transparent)}
+.fx-voice{overflow:hidden;border-radius:14px;z-index:1}
+.fx-slide-frame{display:block;position:relative;width:100%;max-width:640px;min-height:120px;border-radius:12px;isolation:isolate;margin:4px 0 12px}
+.fx-slide-frame img.slide{margin:0;position:relative}
+.fx-slide-loading:before{content:"";position:absolute;inset:0;border-radius:inherit;z-index:1;pointer-events:none;background:linear-gradient(110deg,transparent 15%,color-mix(in srgb,var(--fx-violet) 12%,transparent) 40%,color-mix(in srgb,var(--fx-teal) 18%,transparent) 50%,transparent 80%);background-size:220% 100%;animation:fx-shimmer 1.8s ease-in-out infinite}
+.fx-image{overflow:hidden;z-index:2}.fx-image>div{width:100%;height:100%}
+.fx-surface{transition:border-color .22s ease,box-shadow .22s ease}
+.fx-glint{transition:box-shadow .2s ease,border-color .2s ease,background-color .2s ease}
+.fx-glint:hover,.fx-glint:focus-visible{box-shadow:0 3px 16px color-mix(in srgb,var(--fx-accent) 24%,transparent)}
+@keyframes fx-shimmer{0%{background-position:150% 0}100%{background-position:-80% 0}}
+@media(prefers-reduced-motion:reduce){.fx-slide-loading:before{animation:none}.fx-surface,.fx-glint{transition:none}.fx-liquid{opacity:.35}}
+@media(forced-colors:active){.fx-island,.fx-slide-loading:before{display:none!important}.fx-recording{outline:2px solid Highlight;box-shadow:none}}

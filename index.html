@@ -1,41 +1,646 @@
 <!doctype html>
 <html lang="ru"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+<meta name="theme-color" content="#10111b" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f7f7fc" media="(prefers-color-scheme: light)">
+<meta name="color-scheme" content="light dark">
 <meta name="robots" content="noindex">
-<title>Психолог-консультант</title>
+<meta name="referrer" content="no-referrer">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Фукусю">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./static/icons/icon-180.png">
+<title>Фукусю · Учиться и помнить</title>
 <style>
-:root{--bg:#f6f4ef;--ink:#1d1b18;--mute:#77716a;--acc:#b8322a}
-@media (prefers-color-scheme:dark){:root{--bg:#151412;--ink:#eeeae3;--mute:#9b948a;--acc:#e0574b}}
-body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 -apple-system,system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;padding:16px;box-sizing:border-box;text-align:center}
-h1 span{color:var(--acc)}p{color:var(--mute);max-width:420px}
-button{font:inherit;border:1px solid var(--mute);background:none;color:var(--ink);border-radius:10px;padding:10px 18px;cursor:pointer}
-</style></head><body><div><h1>Психолог-консультант <span>復習</span></h1><p id="m">Открываю…</p><p><button id="again" hidden>Попробовать ещё раз</button></p></div>
+:root{--bg:#f6f4ef;--card:#fff;--ink:#1d1b18;--mute:#77716a;--line:#e6e1d8;--ok:#2f8f5b;--bad:#c4472f;--mid:#c9952b;--acc:#b8322a;--bar:#d9d3c7;--soft:#f0ece4}
+@media (prefers-color-scheme:dark){:root{--bg:#151412;--card:#1f1d1a;--ink:#eeeae3;--mute:#9b948a;--line:#2e2b27;--ok:#5cc28a;--bad:#ef7a62;--mid:#e0b04a;--acc:#e0574b;--bar:#3a3631;--soft:#272421}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 -apple-system,system-ui,sans-serif}
+main{max-width:900px;margin:0 auto;padding:18px 16px 70px}
+header{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap}
+h1{font-size:22px;margin:0}h1 span{color:var(--acc);font-weight:500}h2{font-size:16px;margin:0 0 12px}h3{font-size:17px;margin:0 0 4px}
+.who{color:var(--mute);font-size:14px}
+nav{display:flex;gap:4px;margin:16px 0 18px;background:var(--soft);padding:4px;border-radius:12px;overflow-x:auto}
+nav button{flex:1;border:0;background:none;color:var(--mute);padding:9px 8px;border-radius:9px;font:inherit;font-size:14px;cursor:pointer;white-space:nowrap}
+nav button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.box{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px}
+.meta{color:var(--mute);font-size:13px;margin-bottom:10px}.meta b{color:var(--ink)}
+.q{font-size:19px;font-weight:600;margin:0 0 16px}
+.opts{display:grid;gap:8px}
+.btn{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;padding:11px 14px;font:inherit;text-align:left;cursor:pointer}
+.btn:hover{border-color:var(--mute)}.btn:disabled{cursor:default}.btn.pri{background:var(--ink);color:var(--bg);border-color:var(--ink);text-align:center}
+.btn.right{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 14%,var(--card))}
+.btn.wrong{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 14%,var(--card))}
+.btn.sm{padding:8px 12px;font-size:14px;text-align:center}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.row .btn{flex:1 1 140px;text-align:center}
+textarea,input,select{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px;font:inherit;background:var(--bg);color:var(--ink)}
+textarea{min-height:96px;resize:vertical}
+.ans{margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+.ans p{margin:0 0 8px}.fb{padding:10px 12px;border-radius:10px;background:var(--soft);margin-bottom:12px}
+.slide{display:block;width:100%;max-width:640px;border-radius:10px;border:1px solid var(--line);margin:4px 0 12px}
+.hint{color:var(--mute);font-size:13px;margin-top:10px}
+.progress{height:4px;background:var(--bar);border-radius:2px;margin-bottom:14px;overflow:hidden}.progress i{display:block;height:100%;background:var(--acc)}
+.subjects{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.subj .nums{color:var(--mute);font-size:13px;margin:2px 0 10px}
+.stack{height:8px;border-radius:4px;background:var(--bar);overflow:hidden;display:flex}.stack i{display:block;height:100%}
+.pill{display:inline-block;font-size:12px;padding:2px 8px;border-radius:20px;background:var(--soft);color:var(--mute);margin-right:4px}
+.pill.hot{background:color-mix(in srgb,var(--acc) 16%,var(--card));color:var(--acc)}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:14px}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px}
+.tile b{display:block;font-size:24px;font-variant-numeric:tabular-nums}.tile small{color:var(--mute)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+@media (max-width:720px){.grid{grid-template-columns:1fr}}
+table{width:100%;border-collapse:collapse;font-size:14px}td,th{padding:6px 4px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{color:var(--mute);font-weight:500}td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.meter{height:6px;background:var(--bar);border-radius:3px;overflow:hidden;margin-top:4px}.meter i{display:block;height:100%}
+.chart{display:flex;align-items:flex-end;gap:3px;height:110px}
+.chart div{flex:1;display:flex;flex-direction:column;justify-content:flex-end;min-width:0;height:100%}
+.chart span{display:block;border-radius:2px 2px 0 0}
+.axis{display:flex;justify-content:space-between;color:var(--mute);font-size:12px;margin-top:4px}
+.empty{color:var(--mute)}.legend{color:var(--mute);font-size:12px;margin-top:6px}
+.dot{display:inline-block;width:9px;height:9px;border-radius:2px;margin:0 4px 0 10px;vertical-align:-1px}
+.center{text-align:center;padding:30px 10px}.big{font-size:40px}
+.term{padding:12px 0;border-bottom:1px solid var(--line)}.term:last-child{border:0}
+.term b{font-size:16px}.term .key{color:var(--acc);font-size:12px;margin-left:6px}
+.term p{margin:4px 0 0}.term small{color:var(--mute)}
+.filters{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}.filters>*{flex:1 1 200px}
+.drop{border:2px dashed var(--line);border-radius:14px;padding:18px;text-align:center;color:var(--mute);margin-top:14px;cursor:pointer}
+.drop.on{border-color:var(--acc);color:var(--ink)}
+.toasts{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);display:flex;flex-direction:column;gap:8px;z-index:9;width:min(92vw,420px);pointer-events:none}
+.toast{background:var(--ink);color:var(--bg);border-radius:12px;padding:10px 14px;font-size:14px;box-shadow:0 6px 24px rgba(0,0,0,.25);animation:up .25s ease-out}
+.toast.coin{align-self:center;width:auto;font-weight:600}
+.tutor{position:fixed;left:50%;bottom:0;transform:translateX(-50%);width:min(680px,100vw);max-height:85vh;overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:16px 16px 0 0;box-shadow:0 -8px 30px rgba(0,0,0,.28);padding:16px;z-index:8}
+.tmsg{white-space:pre-wrap;margin:12px 0;line-height:1.55}
+.task{display:flex;gap:10px;align-items:flex-start;padding:10px 4px;border-top:1px solid var(--line);cursor:pointer}.task:hover{background:var(--soft)}.task span{font-size:18px;line-height:1.3}
+.tblwrap{overflow-x:auto}table.tk{min-width:100%;border-collapse:collapse}table.tk th{font-size:13px;text-align:left;padding:4px;color:var(--mute)}table.tk td{padding:3px;vertical-align:top;min-width:120px}table.tk textarea,table.tk input{width:100%;min-height:0;font:inherit;font-size:14px;padding:6px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+.chk{display:flex;gap:10px;padding:7px 0;align-items:flex-start;cursor:pointer}.chk input{margin-top:4px;flex:0 0 auto;width:18px;height:18px}
+.sc{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}.sc select{font:inherit;padding:6px;border-radius:8px;background:var(--bg);color:var(--ink);border:1px solid var(--line)}.res{font-weight:600;margin-top:12px}.tmsg.me{color:var(--mute);text-align:right}
+@keyframes up{from{transform:translateY(12px);opacity:0}to{transform:none;opacity:1}}
+.coins{font-weight:600;color:var(--mid)}
+.rankcard{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.belt{font-size:44px;line-height:1}
+.bar{height:10px;background:var(--bar);border-radius:5px;overflow:hidden;margin:6px 0}.bar i{display:block;height:100%;background:var(--acc)}
+.quest{display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}.quest:last-child{border:0}
+.quest .ok{font-size:18px}.quest .t{flex:1}.quest small{color:var(--mute)}
+.garden{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;background:color-mix(in srgb,var(--mid) 12%,var(--card));padding:10px;border-radius:12px;
+ background-image:repeating-linear-gradient(0deg,transparent 0 7px,color-mix(in srgb,var(--mute) 12%,transparent) 7px 8px)}
+.garden div{aspect-ratio:1;display:grid;place-items:center;font-size:clamp(20px,6vw,34px)}
+.shop{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.shop .btn{text-align:center;padding:10px 6px}.shop .btn b{display:block;font-size:26px}.shop small{color:var(--mute)}
+.badges{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.badge{border:1px solid var(--line);border-radius:12px;padding:10px;text-align:center}.badge b{display:block;font-size:28px}
+.badge.off{opacity:.42;filter:grayscale(1)}.badge small{color:var(--mute);display:block}
+.scene{position:relative}.scene svg{width:100%;height:auto;display:block;border-radius:14px}
+.scene .tag{position:absolute;left:12px;top:12px;background:rgba(255,255,255,.85);color:#1d1b18;border-radius:10px;padding:6px 10px;font-size:14px}
+.stages{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+@media (max-width:560px){.stages{grid-template-columns:repeat(2,1fr)}}
+.st{border:1px solid var(--line);border-radius:12px;padding:6px;text-align:center;font-size:13px}
+.st svg{width:100%;height:auto;aspect-ratio:1;display:block;border-radius:8px}
+.st.now{border:2px solid var(--acc)}.st.future{opacity:.6}.st small{color:var(--mute);display:block}
+.species{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
+.species .btn{text-align:center;padding:8px}.species svg{width:100%;height:auto;aspect-ratio:1;border-radius:10px;display:block;margin-bottom:6px}
+.intro li{margin:8px 0}.intro{border:2px solid var(--acc)}
+.water{display:inline-block;padding:4px 10px;border-radius:20px;background:var(--soft);font-size:14px}
+.water.dry{background:color-mix(in srgb,var(--bad) 18%,var(--card))}
+details summary{cursor:pointer;color:var(--mute)}
+.seal{display:flex;gap:10px;align-items:center;padding:7px 0;border-bottom:1px solid var(--line)}.seal span{font-size:22px;width:30px;text-align:center}
+.learn-head{margin-bottom:16px}.learn-head h2{font-size:23px;line-height:1.3;margin:14px 0 8px}.learn-head p{margin:8px 0}.learn-layout{display:grid;grid-template-columns:230px minmax(0,1fr);gap:16px;align-items:start}.learn-sections{display:grid;gap:8px}.learn-section{width:100%;min-width:0;overflow-wrap:anywhere;min-height:62px;padding:12px;text-align:left}.learn-section[aria-current="step"]{border-color:var(--acc);background:color-mix(in srgb,var(--acc) 7%,var(--card))}.learn-section b{display:block;font-size:15px;font-weight:600}.learn-section small{display:block;color:var(--mute);font-size:13px;margin-top:4px}.learn-body{min-width:0}.learn-body h3{font-size:20px;line-height:1.35;margin-bottom:12px}.learn-text{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.65}.learn-example{border-left:3px solid var(--mid);background:var(--soft);padding:12px 14px;margin:16px 0 24px;border-radius:0 10px 10px 0}.learn-example p{margin:6px 0 0}.learn-check{border-top:1px solid var(--line);padding-top:20px;margin-top:24px}.learn-check label{display:block;font-weight:600;margin:16px 0 8px}.learn-check textarea{min-height:150px}.learn-feedback{border:1px solid var(--line);background:var(--soft);border-radius:10px;padding:14px;margin-top:18px;overflow-wrap:anywhere}.learn-feedback.correct{border-color:var(--ok)}.learn-feedback.partial{border-color:var(--mid)}.learn-feedback.wrong{border-color:var(--bad)}.learn-feedback p{margin:6px 0}.learn-status{min-height:24px;margin-top:10px;font-size:14px;color:var(--mute);overflow-wrap:anywhere}.learn-error{color:var(--bad)}.learn-count{font-variant-numeric:tabular-nums}.learn-actions .btn{min-height:44px}.learn-status.recording{color:var(--bad);font-weight:600}.learn-body details{margin:12px 0}.learn-body details summary{padding:8px 0;min-height:44px}.learn-layout .btn:disabled{opacity:.55;cursor:wait}.learn-layout button:focus-visible,.learn-head button:focus-visible,.learn-layout textarea:focus-visible{outline:3px solid var(--acc);outline-offset:3px}.learn-check .hint{font-size:14px}.learn-back{min-height:44px}.learn-progress{height:7px;margin:10px 0 0}.learn-question{margin:10px 0 16px}.learn-footer{margin-top:20px}
+@media(max-width:700px){.learn-layout{grid-template-columns:1fr}.learn-sections{grid-template-columns:repeat(2,minmax(0,1fr))}.learn-section b{font-size:14px}.learn-head h2{font-size:21px}.learn-body{padding:16px}.learn-actions .btn{flex-basis:100%}}
+@media(prefers-reduced-motion:reduce){.toast{animation:none}.learn-layout *{scroll-behavior:auto}}
+.audio-dock{position:fixed;z-index:6;left:50%;bottom:0;transform:translateX(-50%);width:min(900px,100%);max-height:60dvh;overflow:auto;padding:12px 16px calc(12px + env(safe-area-inset-bottom));background:var(--card);border:1px solid var(--line);border-radius:16px 16px 0 0;box-shadow:0 -5px 24px rgba(0,0,0,.13)}
+.audio-dock[hidden]{display:none}.audio-head{display:flex;gap:12px;align-items:center}.audio-name{flex:1;min-width:0;overflow-wrap:anywhere}.audio-name small{display:block;color:var(--mute);font-size:12px}.audio-name b{font-size:15px;line-height:1.35;display:block}.audio-speed{display:flex;gap:6px;align-items:center;font-size:13px;flex:0 0 auto}.audio-speed select{width:auto;min-height:44px;padding:6px}.audio-close{min-height:44px;min-width:44px;padding:8px}.audio-dock audio{display:block;width:100%;height:48px;margin:8px 0;color-scheme:light dark}.audio-dock audio[hidden]{display:none}.audio-actions{display:flex;gap:8px;flex-wrap:wrap}.audio-actions .btn{flex:1 1 120px;min-height:44px}.audio-status{font-size:13px;color:var(--mute);margin:6px 0 0;overflow-wrap:anywhere}.audio-status.error{color:var(--bad)}.audio-dock button:focus-visible,.audio-dock select:focus-visible,.audio-dock audio:focus-visible{outline:3px solid var(--acc);outline-offset:3px}.audio-dock button:disabled{opacity:.55;cursor:default}body.has-audio main{padding-bottom:calc(var(--audio-space,220px) + 24px)}body.has-audio .toasts{bottom:calc(var(--audio-space,220px) + 12px)}body.has-audio .tutor{bottom:var(--audio-space,220px);max-height:calc(90dvh - var(--audio-space,220px))}.audio-lesson-action{margin:10px 0 14px}.audio-lesson-action .btn{min-height:44px}.audio-study-note{font-size:14px;color:var(--mute);margin:0 0 12px}
+@media(max-width:430px){.audio-dock{padding-left:12px;padding-right:12px}.audio-head{gap:8px}.audio-speed span{display:none}.audio-name b{font-size:14px}.audio-actions .btn{padding:9px 8px;font-size:14px}}
+</style><link rel="stylesheet" href="./static/app.css?v=20261024"><link rel="stylesheet" href="./static/effects.css?v=20261024"><link rel="stylesheet" href="./static/mobile.css?v=20261024"><link rel="stylesheet" href="./static/install.css?v=20261024"></head><body><main>
+<header class="app-header"><div class="brand"><div class="brand-mark" aria-hidden="true">復</div><div><h1>Фукусю <span>復習</span></h1><p>Учиться и помнить</p></div></div><div class="who" id="who"></div></header>
+<nav id="desktop-nav" aria-label="Разделы приложения"><button data-t="home" class="on">Главная</button><button data-t="study">Учить</button><button data-t="glossary">Словарь</button><button data-t="stats">Статистика</button><button data-t="errors">Ошибки</button><button data-t="practice">Практика</button><button data-t="dojo">Мой сад</button></nav>
+<section id="v-home"></section><section id="v-study" hidden></section><section id="v-glossary" hidden></section><section id="v-stats" hidden></section><section id="v-errors" hidden></section><section id="v-dojo" hidden></section><section id="v-practice" hidden></section>
+</main><div class="toasts" id="toasts"></div><div class="tutor" id="tutor" hidden></div>
+<aside class="audio-dock" id="audio-dock" aria-label="Аудиолекция" hidden>
+ <div class="audio-head"><div class="audio-name"><small>Аудиозапись лектора</small><b id="audio-title"></b></div><label class="audio-speed" for="audio-speed"><span>Скорость</span><select id="audio-speed" aria-label="Скорость воспроизведения" onchange="audioSpeed(this.value)"><option value="0.75">0,75×</option><option value="1" selected>1×</option><option value="1.25">1,25×</option><option value="1.5">1,5×</option><option value="1.75">1,75×</option><option value="2">2×</option></select></label><button class="btn sm audio-close" onclick="audioClose()" aria-label="Остановить и закрыть аудиолекцию">✕</button></div>
+ <audio id="lecture-audio" controls preload="metadata" aria-label="Запись лекции: воспроизведение и перемотка" aria-describedby="audio-status" hidden></audio>
+ <div class="audio-actions"><button class="btn sm" id="audio-questions" onclick="audioQuestions()">Все вопросы лекции</button><button class="btn sm" id="audio-sections" onclick="audioSections()">Смысловые разделы</button><button class="btn sm" id="audio-retry" onclick="audioOpen(AU.lecture_id)" hidden>Попробовать ещё раз</button><button class="btn sm" id="audio-resume" onclick="audioPlay()" hidden>Продолжить лекцию</button></div>
+ <p class="audio-status" id="audio-status" role="status" aria-live="polite"></p>
+</aside>
+<nav id="mobile-nav" aria-label="Основная навигация">
+ <button data-mobile-tab="home" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 10 9-7 9 7v10H3zM9 20v-7h6v7"/></svg><span>Главная</span></button>
+ <button data-mobile-tab="study"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v16M3 4c4-1 7 0 9 2 2-2 5-3 9-2v15c-4-1-7 0-9 2-2-2-5-3-9-2z"/></svg><span>Учить</span></button>
+ <button data-mobile-tab="practice"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5H4v16h16V5h-5M9 3h6v4H9zM8 13l3 3 5-6"/></svg><span>Практика</span></button>
+ <button data-mobile-tab="glossary"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h15v18H5a2 2 0 0 1 0-4h15M5 3a2 2 0 0 0-2 2v14M9 7h7M9 11h5"/></svg><span>Словарь</span></button>
+ <button id="mobile-more-toggle" aria-expanded="false" aria-controls="mobile-more"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg><span>Ещё</span></button>
+</nav>
+<div id="mobile-more" role="dialog" aria-modal="true" aria-labelledby="mobile-more-title" hidden><div class="mobile-more-backdrop" data-mobile-close></div><div id="mobile-more-panel" class="mobile-more-panel"><div class="mobile-more-heading"><h2 id="mobile-more-title">Ещё</h2><button id="mobile-more-close" data-mobile-close aria-label="Закрыть меню">✕</button></div><button data-mobile-tab="stats"><span>Статистика</span><small>Повторы и освоенные карточки</small></button><button data-mobile-tab="errors"><span>Ошибки</span><small>Вернуться к сложным вопросам</small></button><button data-mobile-tab="dojo"><span>Мой сад</span><small>Рост дерева и награды</small></button></div></div>
+<script>window.FUKUSHU_HOSTED=true;</script>
+<script src="./static/connection.js?v=20261024"></script>
 <script>
-// Ключ после # не уходит на сервер GitHub. Текущий адрес приложения бот кладёт в url.txt.
-// Перед переходом проверяем, что адрес жив: после сна компьютера туннель бывает мёртв,
-// бот поднимает новый в течение пары минут — поэтому несколько попыток с перечитыванием url.txt.
-const [key, tab] = location.hash.slice(1).split('~'), m = document.getElementById('m'), again = document.getElementById('again');
-const RAW = 'https://api.github.com/repos/listestateru-cell/psy-konsultant/contents/url.txt';
-const timeout = (ms) => new Promise((_, no) => setTimeout(() => no('timeout'), ms));
-async function tryOpen(attempt) {
-  again.hidden = true;
-  try {
-    const u = (await (await fetch(RAW + '?t=' + Date.now(), {headers: {Accept: 'application/vnd.github.raw'}, cache: 'no-store'})).text()).trim();
-    if (!/^https:\/\//.test(u)) throw 'no url';
-    const r = await Promise.race([fetch(u + '/healthz', {cache: 'no-store'}), timeout(8000)]);
-    if (!r.ok) throw 'down';
-    location.replace(u + '/u/' + key + '/' + (tab ? '#' + tab : ''));
-  } catch (_) {
-    if (attempt < 12) {
-      m.textContent = attempt ? `Компьютер с ботом пока не отвечает, жду… (попытка ${attempt + 1} из 12)` : 'Соединяюсь…';
-      setTimeout(() => tryOpen(attempt + 1), 10000);
-    } else {
-      m.textContent = 'Не достучался до компьютера с ботом. Скорее всего, он выключен или спит. Попробуй позже.';
-      again.hidden = false;
-    }
-  }
+const KEY=window.FukushuConnection?.key || location.pathname.split('/')[2], API=window.FukushuConnection?.apiBase() || '/api/'+KEY+'/';
+const $=id=>document.getElementById(id);
+const e=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const pct=v=>v==null?'—':Math.round(v)+'%';
+const col=v=>v==null?'var(--bar)':v>=85?'var(--ok)':v>=65?'var(--mid)':'var(--bad)';
+const LV={0:'📖 термины',1:'сю · знать',2:'ха · понимать',3:'ри · применять'};
+const get=p=>fetch(API+p).then(r=>{if(!r.ok)throw r.status;return r.json()});
+const post=(p,b)=>fetch(API+p,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}).then(async r=>{const data=await r.json();if(!r.ok)throw data.error||'Не получилось выполнить запрос. Попробуй ещё раз.';return data});
+const slideUrl=c=>`${API}slide/${c.lecture_id}/${c.slide}`;
+let SUBJ=[]; // дисциплины
+const subjOptions=sel=>`<option value="">Все дисциплины</option>`+SUBJ.map(s=>`<option value="${s.id}"${sel==s.id?' selected':''}>${e(s.name)}</option>`).join('');
+
+document.querySelectorAll('#desktop-nav button').forEach(b=>b.onclick=()=>tab(b.dataset.t));
+async function tab(t){const nav=await tkBeforeNavigation();if(nav==null)return;if(typeof learnLeave==='function')learnLeave();document.querySelectorAll('#desktop-nav button').forEach(b=>b.classList.toggle('on',b.dataset.t==t));
+ ['home','study','glossary','stats','errors','dojo','practice'].forEach(x=>$('v-'+x).hidden=x!=t);
+ if(t=='dojo')loadDojo(); if(t=='practice')loadPractice(undefined,nav); if(t=='home')loadHome(); if(t=='stats')loadStats(); if(t=='errors')loadErrors(); if(t=='glossary')loadGlossary();
+ if(t=='study'&&!S)studyMenu();if(typeof window!=='undefined'){window.FukushuMobile?.sync?.(t);window.FukushuConnection?.setRoute?.(t)}; window.scrollTo(0,0);}
+window.FukushuNavigate=t=>tab(t);
+
+// ---------- главная: дисциплины ----------
+async function loadHome(){
+ const o=await get('overview'); SUBJ=o.subjects;
+ const h=o.subjects.map(s=>{const st=s.cards?100*s.started/s.cards:0, ma=s.cards?100*s.mature/s.cards:0;
+  return `<div class="box subj"><h3>${e(s.name)}</h3>
+   <div class="nums">${s.lectures} лекц. · ${s.cards} карточек · ${s.terms} терминов${s.acc!=null?' · верных '+pct(s.acc):''}</div>
+   ${s.cards?`<div class="stack" title="выучено прочно / начато / не начато"><i style="width:${ma}%;background:var(--ok)"></i><i style="width:${st-ma}%;background:var(--mid)"></i></div>
+   <div class="hint" style="margin-top:6px">${s.mature} выучено прочно, ${s.started-s.mature} в процессе, ${s.cards-s.started} не начато</div>
+   <div style="margin-top:8px">${s.due?`<span class="pill hot">к повтору ${s.due}</span>`:''}${s.new_avail?`<span class="pill">новых ${s.new_avail}</span>`:''}</div>
+   <div class="row"><button class="btn sm pri" onclick="startSession('due',${s.id},0)">Учить</button><button class="btn sm" onclick="startSession('due',${s.id},1)">Термины</button><button class="btn sm" onclick="pickLecture(${s.id})">🎧 Лекция</button><button class="btn sm" onclick="openStats(${s.id})">Статистика</button></div>`
+   :'<div class="hint">Материалов пока нет. Можно прислать конспект или презентацию ниже.</div>'}</div>`}).join('');
+ $('v-home').innerHTML=`<div class="box home-hero" data-fx-beam><div><span class="eyebrow">Твоё пространство для учёбы</span><h2>Что изучим сегодня?</h2><p>Продолжи занятие или выбери лекцию.</p><div class="row">${reviewRead()?'<button class="btn pri" onclick="reviewRestore()">Продолжить занятие</button>':'<button class="btn pri" onclick="pickLecture(0)">Выбрать лекцию</button>'}<button class="btn" onclick="${reviewRead()?'pickLecture(0)':'startSession(\'due\',0,0)'}">${reviewRead()?'Все лекции':'Повторить карточки'}</button></div>${window.FukushuConnection?.hosted?'<button class="install-link" data-install-open>Добавить на экран телефона</button>':''}</div><div class="home-orb" data-fx="orb" data-state="breathing" aria-hidden="true"></div></div><div id="hometasks"></div><div class="home-section-title"><h2>Мои дисциплины</h2><small>${o.subjects.reduce((n,s)=>n+s.lectures,0)} лекций</small></div><div class="subjects">${h}</div>
+  <div class="row home-secondary"><button class="btn" onclick="askFree()">Спросить преподавателя</button><button class="btn" onclick="startSession('due',0,0)">Учить всё вперемешку</button></div><div class="home-secondary"><div id="hometree"></div></div>
+  <div class="drop" id="drop"><b>Добавить материал</b><br>Перетащи сюда или нажми: PDF, DOCX, TXT, аудио. Если такого файла ещё нет в базе,
+   я определю дисциплину, положу его туда и сделаю вопросы. Заниматься по нему смогут все.<input type="file" id="file" hidden
+   accept=".pdf,.docx,.doc,.txt,.md,.rtf,.mp3,.m4a,.wav,.ogg,.mp4,.mov,.png,.jpg,.jpeg,.heic"></div><div id="upres" class="hint"></div>`;
+ const d=$('drop'),f=$('file');
+ d.onclick=()=>f.click(); f.onchange=()=>f.files[0]&&upload(f.files[0]);
+ d.ondragover=ev=>{ev.preventDefault();d.classList.add('on')}; d.ondragleave=()=>d.classList.remove('on');
+ d.ondrop=ev=>{ev.preventDefault();d.classList.remove('on');ev.dataTransfer.files[0]&&upload(ev.dataTransfer.files[0])};homeTree();homeTasks();}
+async function upload(file){
+ $('upres').textContent=`Загружаю «${file.name}» и определяю дисциплину… это до минуты.`;try{window.FukushuFX?.loading?.('#drop',true,'connecting')}catch(_){}
+ try{const r=await fetch(API+'upload',{method:'POST',headers:{'X-Filename':encodeURIComponent(file.name)},body:file}).then(r=>r.json());
+  $('upres').textContent=r.status=='duplicate'?`Такой файл уже есть в базе (${r.where}), по нему уже можно заниматься.`
+   :r.status=='rejected'?'Похоже, это не учебный материал по психологии, в базу не добавлен.'
+   :r.status=='placed'?`Готово: «${r.subject} / ${r.title}».${r.new_subject?' Это новая дисциплина.':''} Вопросы и словарь появятся через несколько минут, бот напишет.`
+   :('Не получилось: '+(r.error||'ошибка'));}catch(_){$('upres').textContent='Не получилось загрузить файл.'}finally{try{window.FukushuFX?.loading?.('#drop',false)}catch(_){}}}
+
+// ---------- повторение ----------
+let S=null;
+function studyMenu(){learnLeave();$('v-study').innerHTML=`<div class="box"><h2>Что повторяем?</h2>
+ <div class="row"><button class="btn pri" onclick="pickLecture(0)">Открыть мои лекции</button></div>
+ ${reviewRead()?'<div class="row"><button class="btn pri" onclick="reviewRestore()">Продолжить вопросы</button></div>':''}
+ ${SUBJ.filter(s=>s.cards).map(s=>`<div class="row" style="align-items:center"><div style="flex:2 1 220px"><b>${e(s.name)}</b><br><small class="hint">к повтору ${s.due}, новых ${s.new_avail}</small></div>
+  <button class="btn sm pri" onclick="startSession('due',${s.id},0)">Учить</button><button class="btn sm" onclick="startSession('due',${s.id},1)">Термины</button></div>`).join('')||'<p class="empty">Карточек пока нет.</p>'}
+ <div class="row"><button class="btn" onclick="startSession('due',0,0)">🌀 Всё вперемешку</button><button class="btn" onclick="startSession('due',0,1)">📖 Все термины</button></div>
+ <div class="row"><button class="btn" onclick="pickLecture(0)">🎧 Закрепить конкретную лекцию</button><button class="btn" onclick="askFree()">🤔 Спросить, что непонятно</button></div></div>`}
+// Одна лекция — например, только что прослушанная: её повторы, потом новые из неё без дневной нормы,
+// а когда всё начато — её самые слабые карточки
+async function pickLecture(subject){
+ if(await tabOnly('study')==null)return; learnLeave();$('v-study').innerHTML='<div class="box center loading-line" data-fx-busy="true" data-fx-state="searching">Загружаю…</div>';
+ const L=(await get('lectures'+(subject?'?subject='+subject:''))).lectures.filter(l=>l.cards||l.has_explanation);
+ const groups=[...new Set(L.map(l=>l.subject))];
+ $('v-study').innerHTML=`<div class="lecture-intro"><span class="eyebrow">Библиотека</span><h2>Мои лекции</h2><p class="hint">Слушай лектора, разбирай тему по разделам и проверяй себя.</p><label class="lecture-search"><span class="hint">Найти лекцию или дисциплину</span><input type="search" id="lecture-search" placeholder="Например, память или психофизиология" oninput="filterLectures(this.value)"></label></div>
+  ${groups.map(g=>`<h3 class="lecture-group-title" data-lecture-group="${e(g)}">${e(g)}</h3>`+L.filter(l=>l.subject==g).map(l=>`<article class="lecture-card" data-lecture-group="${e(g)}" data-lecture-search="${e((l.title+' '+g).toLocaleLowerCase('ru'))}">
+   <div class="lecture-details"><h3>${e(l.title)}</h3><small>${l.new?`не начато ${l.new}`:'всё начато, можно закрепить'}${l.due?` · к повтору ${l.due}`:''} · ${l.cards} карточек</small></div><div class="lecture-actions">
+   ${l.has_audio!==false?`<button class="btn sm pri lecture-primary" onclick="audioStudy(${l.id},${l.subject_id})">Слушать и учиться</button>`:''}<button class="btn sm ${l.has_audio===false?'pri lecture-primary':''}" onclick="openLesson(${l.id})">Разделы · Объясню сам</button><button class="btn sm" onclick="explain('lecture',${l.id})">${l.has_explanation?'Читать разбор':'О чём лекция'}</button>${l.cards?`<button class="btn sm" onclick="audioRepeat(${l.id},${l.subject_id})">Повторить без аудио</button><button class="btn sm" onclick="startSession('due',${l.subject_id},1,${l.id})">Термины</button>`:''}</div></article>`).join('')).join('')||'<p class="empty">Разобранных лекций пока нет.</p>'}
+  <p id="lecture-search-empty" class="empty" hidden>Ничего не нашлось. Попробуй другое слово.</p><div class="row"><button class="btn sm" onclick="studyMenu()" style="flex:0 1 200px">← К повторению</button></div>`}
+function filterLectures(value){const query=value.trim().toLocaleLowerCase('ru'),visible=new Set();document.querySelectorAll('.lecture-card').forEach(card=>{card.hidden=!card.dataset.lectureSearch.includes(query);if(!card.hidden)visible.add(card.dataset.lectureGroup)});document.querySelectorAll('.lecture-group-title').forEach(title=>title.hidden=!visible.has(title.dataset.lectureGroup));$('lecture-search-empty').hidden=visible.size>0}
+async function startSession(mode,subject,terms,lecture){
+ if(!await reviewBeforeSession())return;
+ if(await tabOnly('study')==null)return; learnLeave();$('v-study').innerHTML='<div class="box center loading-line" data-fx-busy="true" data-fx-state="searching">Загружаю…</div>';
+ const r=await get(`session?mode=${mode}&subject=${subject||''}&terms=${terms||0}&lecture=${lecture||''}`);
+ if(!r.cards.length){S=null;$('v-study').innerHTML=`<div class="box center"><div class="big">👌</div><p>${e(r.message)}</p><div class="row" style="justify-content:center"><button class="btn sm" onclick="S=null;studyMenu()" style="flex:0 1 220px">Выбрать другое</button></div></div>`;return}
+ S={cards:r.cards,pos:0,ok:0,done:0,mode,subject,terms,lecture,requeue:{}};show();}
+async function tabOnly(t){const nav=await tkBeforeNavigation();if(nav==null)return null;document.querySelectorAll('#desktop-nav button').forEach(b=>b.classList.toggle('on',b.dataset.t==t));['home','study','glossary','stats','errors','dojo','practice'].forEach(x=>$('v-'+x).hidden=x!=t);if(typeof window!=='undefined'){window.FukushuMobile?.sync?.(t);window.FukushuConnection?.setRoute?.(t)};window.scrollTo(0,0);return nav}
+function show(restoring=false){
+ if(S.pos>=S.cards.length)return finish();
+ const c=S.card=S.cards[S.pos]; if(!restoring){S.pending=null;S.draft=''}
+ const lvl=c.kind=='term'?'📖 термин':(LV[c.level]||'');
+ let h=`<div class="progress"><i style="width:${100*S.pos/S.cards.length}%"></i></div><div class="box">
+  <div class="meta"><b>${S.pos+1}/${S.cards.length}</b> · ${e(c.topic)} · ${lvl}${c.is_new?' · 🆕':''}<br>${e(c.subject||'')}${c.lecture?' · '+e(c.lecture):''}</div>
+  ${S.mode==='lecture'?'<p class="audio-study-note">Все вопросы этой лекции. Отвечай в своём темпе; запись можно поставить на паузу или перемотать.</p>':''}${c.lecture_id?`<div class="row audio-lesson-action"><button class="btn sm" onclick="audioOpen(${c.lecture_id})">Слушать лектора</button><button class="btn sm" onclick="openLesson(${c.lecture_id})">Смысловые разделы</button></div>`:''}
+  ${c.slide&&c.slide_side=='question'?`<img class="slide" crossorigin="anonymous" src="${slideUrl(c)}" alt="Слайд ${c.slide}">`:''}
+  <p class="q">${e(c.question)}</p><div id="act">`;
+ if(c.kind=='mcq')h+='<div class="opts">'+c.options.map((o,i)=>`<button class="btn" data-i="${i}">${i+1}. ${e(o)}</button>`).join('')+'</div>';
+ else if(c.kind=='tf')h+='<div class="row"><button class="btn" data-i="1">✅ Верно</button><button class="btn" data-i="0">❌ Неверно</button></div>';
+ else h+=`<textarea id="txt" oninput="reviewDraft()" aria-label="Мой ответ" placeholder="Ответь своими словами. Можно и мысленно: тогда сразу «Показать ответ».">${e(S.pending?.answer||S.draft||'')}</textarea>
+  <div class="row"><button class="btn pri" id="chk">Проверить мой ответ</button><button class="btn" id="rev">👀 Показать ответ</button></div>
+  <div class="hint">Проверка по смыслу занимает секунд десять-двадцать.</div>`;
+ h+='</div><div id="out"></div></div>';
+ $('v-study').innerHTML=h;
+ document.querySelectorAll('#act [data-i]').forEach(b=>b.onclick=()=>pick(+b.dataset.i,b));
+ if($('rev')){$('rev').onclick=reveal;$('chk').onclick=check}
+ reviewPersist();if(S.pending){lock();reviewRender(S)}}
+function answerHtml(c){let t=`<p><b>Ответ:</b> ${e(c.answer)}</p>`;
+ if(c.explanation)t+=`<p>💡 ${e(c.explanation)}</p>`; if(c.mnemonic)t+=`<p>🧠 Запоминалка: ${e(c.mnemonic)}</p>`;
+ if(c.slide&&c.slide_side=='answer')t+=`<img class="slide" crossorigin="anonymous" src="${slideUrl(c)}" alt="Слайд ${c.slide}" loading="lazy">`; return t}
+function buttons(opts,q){return (q?`<p class="hint" style="margin-top:4px">${q}</p>`:'')+'<div class="row">'+opts.map((o,i)=>`<button class="btn${i==0&&o[1]>=2?' pri':''}" data-k="${i}">${o[0]}</button>`).join('')+'</div>'}
+function setOut(html,opts,q,details=''){const s=S,p=s.pending;$('out').innerHTML=`<div class="ans">${html}${buttons(opts,q)}${details}<div class="row"><button class="btn sm" onclick="explain('card',${s.card.id})" style="flex:0 1 220px">🤔 Объясни проще</button></div></div>`;
+ document.querySelectorAll('#out [data-k]').forEach(b=>b.onclick=()=>{if(S===s&&s.pending===p)fin(...opts[+b.dataset.k].slice(1))});}
+function lock(){document.querySelectorAll('#act button,#act textarea').forEach(x=>x.disabled=true)}
+function reviewKey(){return 'fukushu.review.session.'+KEY}
+function reviewPersist(s=S){if(!s||S!==s)return;try{localStorage.setItem(reviewKey(),JSON.stringify({version:1,session:s},(k,v)=>k==='_flight'?undefined:v));s.storageError=false}catch(_){s.storageError=true}}
+function reviewDraft(){if(S&&!S.pending){S.draft=$('txt').value;reviewPersist()}}
+function reviewAttempt(kind,answer){return {attempt_id:typeof crypto!=='undefined'&&crypto.randomUUID?crypto.randomUUID():'review-'+Date.now()+'-'+Math.random().toString(36).slice(2),kind,answer:answer||null,state:kind==='grade'?'grading':kind==='pick'?'saving':'manual',counted:false}}
+function reviewRender(s=S){if(S!==s||!s.pending||!$('out')||$('v-study').hidden)return;const p=s.pending,c=s.card;
+ if(p.kind==='pick')document.querySelectorAll('#act [data-i]').forEach(b=>{const i=+b.dataset.i;if(i===c.correct)b.classList.add('right');else if(i===p.selected)b.classList.add('wrong')});
+ let status=p.state==='saved'?'Сохранено: ответ и прогресс.':p.state==='grading'?'Проверяю по смыслу. Результат сохранится автоматически.':p.state==='saving'?'Сохраняю ответ и прогресс…':p.state==='error'?'Не удалось подтвердить сохранение. Ответ остался в этом браузере. Повтори запрос.':'Выбери самооценку, чтобы сохранить результат.';
+ if(s.storageError&&p.state!=='saved')status+=' Браузер не смог сохранить черновик. Дождись подтверждения перед закрытием.';
+ const icon={correct:'✅ Засчитано.',partial:'🟡 Частично.',wrong:'❌ Не то.'}[p.verdict]||'';
+ const feedback=p.kind==='pick'?`<div class="fb">${p.correct?'✅ Правильно.':'❌ Мимо.'} ${e(c.explanation||c.answer)}</div>`:p.feedback?`<div class="fb">${icon} ${e(p.feedback)}</div>`:'';
+ const own=p.answer?`<p><b>Твой ответ:</b> ${e(p.answer)}</p>`:'';
+ const opts=p.state==='saved'?[['Дальше ▶']]:p.state==='manual'?[['✅ Вспомнил',3,1,null],['😓 С трудом',2,1,null],['❌ Не вспомнил',1,0,null],['🤦 Был уверен, но ошибся',1,0,1],['⚡ Легко',4,1,null]]:[];
+ setOut(`<p class="hint loading-line" data-fx-busy="${p.state==='grading'||p.state==='saving'}" data-fx-state="${p.state==='grading'?'solving':'connecting'}" role="status" aria-live="polite">${e(status)}</p>${p.state==='error'?'<button class="btn pri" id="review-retry">Повторить сохранение</button>':''}${feedback}`,opts,'',own+(p.state==='grading'?'':answerHtml(c)));
+ if(p.state==='error')$('review-retry').onclick=reviewRetry;}
+function reviewAccept(s,p,res){if(!res?.saved)throw new Error('save not confirmed');p.state='saved';p.result=res;p.error='';
+ if(!p.counted){p.counted=true;s.done++;s.ok+=p.correct;
+  if(res.game){const g=res.game;s.earned=(s.earned||0)+g.gained;if(S===s){toast(`+${g.gained} 🪙${g.has_plant&&g.grown?' · дерево +'+g.grown+' 🌱':''}${g.combo>=3&&(g.opened||[]).includes('quests')?' · серия ×'+g.combo:''}`,'coin');(g.events||[]).forEach((t,i)=>setTimeout(()=>toast(t),400+i*700));setWho(g.mon)}}
+  if(p.rating===1&&s.mode!=='errors'){const n=s.requeue[s.card.id]=(s.requeue[s.card.id]||0)+1;if(n<3)s.cards.push({...s.card,is_new:false})}}
+ reviewPersist(s);reviewRender(s);return true;}
+async function reviewSave(s,p,rating,correct,confident){if(p.state==='saved')return true;if(p._flight)return p._flight;
+ Object.assign(p,{rating,correct,confident:confident??null,state:'saving'});reviewPersist(s);reviewRender(s);
+ p._flight=(async()=>{try{return reviewAccept(s,p,await post('review',{attempt_id:p.attempt_id,card_id:s.card.id,rating,correct,confident:p.confident,answer:p.answer,feedback:p.feedback||null,graded:!!p.graded}))}
+  catch(_){p.state='error';reviewPersist(s);reviewRender(s);return false}finally{p._flight=null}})();return p._flight;}
+async function reviewGrade(s,p){if(p.state==='saved')return true;if(p._flight)return p._flight;
+ p.state='grading';reviewPersist(s);reviewRender(s);
+ p._flight=(async()=>{try{const r=await post('grade',{attempt_id:p.attempt_id,card_id:s.card.id,answer:p.answer});
+  if(S!==s||s.pending!==p)return false;
+  p.feedback=r.feedback;p.verdict=r.verdict;p.graded=!!r.verdict;
+  if(['correct','partial','wrong'].includes(r.verdict)){p.rating={correct:3,partial:2,wrong:1}[r.verdict];p.correct=r.verdict==='wrong'?0:1;p.confident=null;return reviewAccept(s,p,r.review)}
+  p.state='manual';reviewPersist(s);reviewRender(s);return false;
+ }catch(_){p.state='error';reviewPersist(s);reviewRender(s);return false}finally{p._flight=null}})();return p._flight;}
+function reviewRetry(){const s=S,p=s?.pending;if(!p)return Promise.resolve(false);return p.kind==='grade'&&!p.rating?reviewGrade(s,p):reviewSave(s,p,p.rating,p.correct,p.confident)}
+async function pick(i,btn){const s=S;if(!s||s.pending)return;const c=s.card,right=i===c.correct;lock();const p=s.pending=reviewAttempt('pick',c.kind==='mcq'?c.options[i]:(i?'Верно':'Неверно'));p.selected=i;return reviewSave(s,p,right?3:1,right?1:0,null)}
+function reveal(){const s=S;if(!s||s.pending)return;lock();s.pending=reviewAttempt('reveal',$('txt').value.trim());reviewPersist(s);reviewRender(s)}
+async function check(){const s=S;if(!s||s.pending)return;const a=$('txt').value.trim();if(!a){$('txt').focus();return}lock();const p=s.pending=reviewAttempt('grade',a);return reviewGrade(s,p)}
+async function fin(rating,correct,confident){const s=S,p=s?.pending;if(!p||p.advancing)return;p.advancing=true;
+ if(p._flight)await p._flight;
+ if(p.state!=='saved'&&p.state==='manual')await reviewSave(s,p,rating,correct,confident);
+ if(S!==s||s.pending!==p||p.state!=='saved'){p.advancing=false;return}
+ s.pos++;show();}
+function reviewRead(){try{const raw=JSON.parse(localStorage.getItem(reviewKey())||'null'),s=raw?.session;
+ if(raw?.version!==1||!s||!Array.isArray(s.cards)||!s.cards.length||!Number.isInteger(s.pos)||s.pos<0||s.pos>=s.cards.length||!s.cards.every(c=>Number.isSafeInteger(c.id)&&c.id>0))return null;return s;
+ }catch(_){return null}}
+async function reviewBeforeSession(){const s=S||reviewRead(),p=s?.pending;if(!p||p.state==='saved'||p.state==='manual')return true;
+ if(p._flight)await p._flight;if(p.state==='saved'||p.state==='manual')return true;
+ S=s;if(!p._flight)p.state='error';await tabOnly('study');show(true);return false;}
+function reviewRestore(){try{const s=reviewRead();if(!s)return false;
+ S=s;s.card=s.cards[s.pos];if(s.pending)s.pending.advancing=false;
+ tabOnly('study').then(()=>{if(S!==s)return;show(true);const p=s.pending;if(p&&p.state!=='saved'&&p.state!=='manual')reviewRetry()});return true;
+ }catch(_){return false}}
+async function finish(){try{localStorage.removeItem(reviewKey())}catch(_){}const st=await get('stats'+(S.subject?'?subject='+S.subject:''));const pr=await get('game');const acc=S.done?Math.round(100*S.ok/S.done):0;const sc=S;S=null;
+ const r=pr.rank, op=new Set(pr.opened);
+ const lvl=[op.has('mastery')?`${r.emoji} ${r.name}${r.next_at?` · до ${r.next_emoji} ${r.next_name} ещё ${r.next_at-r.points} оч.`:''}`:'',op.has('streak')?`🔥 серия ${st.streak} дн`:''].filter(Boolean).join(' · ');
+ $('v-study').innerHTML=`<div class="box center"><div class="big">🎌</div><h2>Сессия закончена</h2><p>Верных ${acc}%. Заработано <b class="coins">+${sc.earned||0} 🪙</b>, в кошельке ${pr.mon} 🪙.</p>
+  ${lvl?`<p>${lvl}</p>`:''}
+  <div style="text-align:left;max-width:420px;margin:0 auto">${pr.quests.map(q=>`<div class="quest"><span class="ok">${q.done?'✅':'▫️'}</span><span class="t">${e(q.text)}<br><small>${q.progress}/${q.target} · +${q.reward} 🪙</small></span></div>`).join('')}</div>
+  ${st.due||st.new_avail?`<p class="hint">Здесь ещё доступно: ${st.due} повторов и ${st.new_avail} новых.</p>`:'<p class="hint">Здесь на сейчас всё. Бот напомнит, когда пора.</p>'}
+  <div class="row" style="justify-content:center">${st.due||st.new_avail||sc.lecture?`<button class="btn pri" onclick="startSession('${sc.mode}',${sc.subject||0},${sc.terms||0},${sc.lecture||0})" style="flex:0 1 200px">${sc.lecture?'Ещё эту лекцию':'Ещё сессию'}</button>`:''}<button class="btn" onclick="tab('home')" style="flex:0 1 200px">На главную</button></div></div>`;}
+document.addEventListener('keydown',ev=>{if(!S||/TEXTAREA|INPUT/.test(ev.target.tagName))return;
+ const k=ev.key; const outB=[...document.querySelectorAll('#out [data-k]')].filter(b=>!b.disabled);
+ if(outB.length&&k=='Enter'){ev.preventDefault();outB[0].click();return}
+ if(outB.length&&/^[1-9]$/.test(k)&&outB[+k-1]){outB[+k-1].click();return}
+ const actB=[...document.querySelectorAll('#act [data-i]')].filter(b=>!b.disabled);
+ if(actB.length&&/^[1-9]$/.test(k)&&actB[+k-1])actB[+k-1].click();});
+
+// ---------- словарь ----------
+let GL=[];
+async function loadGlossary(subject){
+ if(!SUBJ.length)SUBJ=(await get('overview')).subjects;
+ GL=(await get('glossary'+(subject?'?subject='+subject:''))).terms;
+ $('v-glossary').innerHTML=`<div class="box"><div class="filters"><select id="gs">${subjOptions(subject)}</select><input id="gq" placeholder="Поиск по терминам и определениям"></div>
+  <div class="row" style="margin:0 0 6px"><button class="btn sm pri" onclick="startSession('due',${subject||0},1)" style="flex:0 1 260px">Повторить термины по карточкам</button></div>
+  <div id="gl"></div></div>`;
+ $('gs').onchange=()=>loadGlossary($('gs').value); $('gq').oninput=drawGlossary; drawGlossary();}
+function drawGlossary(){const q=($('gq').value||'').toLowerCase();
+ const rows=GL.filter(t=>!q||(t.term+' '+t.definition).toLowerCase().includes(q));
+ $('gl').innerHTML=rows.length?`<p class="hint" style="margin-top:0">${rows.length} терминов. ★ — главные для темы.</p>`+rows.map(t=>`<div class="term"><b>${e(t.term)}</b>${t.key?'<span class="key">★ главный</span>':''}
+  <p>${e(t.definition)}</p>${t.example?`<p><small>Пример: ${e(t.example)}</small></p>`:''}<small>${e(t.subject)} · ${e(t.lecture)}${t.slide?` · <a href="${API}slide/${t.lecture_id}/${t.slide}" target="_blank">слайд ${t.slide}</a>`:''} · <a href="#" onclick="explain('term',${t.id});return false">🤔 объясни проще</a></small></div>`).join('')
+  :'<p class="empty">Ничего не нашлось.</p>';}
+
+// ---------- статистика ----------
+function bars(rows,key,stack){if(!rows.length)return'<div class="empty">Пока нет данных</div>';
+ const m=Math.max(...rows.map(r=>r[key]),1);
+ return '<div class="chart">'+rows.map(r=>{const h=100*r[key]/m;
+  if(stack){const ok=100*r.ok/m;return `<div title="${r.day}: ${r.ok} верно из ${r.n}"><span style="height:${h-ok}%;background:var(--bad)"></span><span style="height:${ok}%;background:var(--ok)"></span></div>`}
+  return `<div title="${r.day}: ${r[key]}"><span style="height:${h}%;background:var(--acc)"></span></div>`}).join('')+
+ `</div><div class="axis"><span>${rows[0].day.slice(5)}</span><span>${rows[rows.length-1].day.slice(5)}</span></div>`}
+async function openStats(subject){if(await tabOnly('stats')!=null)loadStats(subject)}
+async function loadStats(subject){
+ if(!SUBJ.length)SUBJ=(await get('overview')).subjects;
+ const s=await get('stats'+(subject?'?subject='+subject:''));
+ const t=[['К повтору сейчас',s.due],['Новых доступно',s.new_avail],['Помнишь сейчас',pct(s.memory_now)],['Верных за 7 дней',pct(s.acc7)],
+  ['Выучено прочно',s.mature],['Серия, дней',s.streak],['Ошибок всего',s.errors_total],['Уверенных ошибок',s.confident_wrong]];
+ $('v-stats').innerHTML=`<div class="filters"><select id="ss">${subjOptions(subject)}</select></div>
+ <div class="tiles">${t.map(([k,v])=>`<div class="tile"><b>${v}</b><small>${k}</small></div>`).join('')}</div>
+ <div class="box"><h2>Ответы по дням, 30 дней</h2>${bars(s.daily,'n',true)}<div class="legend"><span class="dot" style="background:var(--ok)"></span>верно<span class="dot" style="background:var(--bad)"></span>ошибка</div></div>
+ <div class="grid">
+  <div class="box"><h2>Где просел: темы от слабых к сильным</h2>${s.topics.length?'<table>'+s.topics.map(r=>`<tr><td>${e(r.topic)}<div class="meter"><i style="width:${r.acc}%;background:${col(r.acc)}"></i></div></td><td class="n">${pct(r.acc)}<br><small>${r.n} отв.</small></td></tr>`).join('')+'</table>':'<div class="empty">Нужно хотя бы 3 ответа по теме</div>'}</div>
+  <div class="box"><h2>Лекции</h2>${s.by_lecture.length?'<table><tr><th>Лекция</th><th class="n">Карточек</th><th class="n">Верных</th></tr>'+s.by_lecture.map(r=>`<tr><td>${e(r.title)}<br><small style="color:var(--mute)">${e(r.subject)}${r.status=='processing'?' · ⏳ разбирается':''}</small></td><td class="n">${r.cards}${r.new?` <small>(${r.new} нов.)</small>`:''}</td><td class="n" style="color:${col(r.acc)}">${pct(r.acc)}</td></tr>`).join('')+'</table>':'<div class="empty">Лекций пока нет</div>'}</div>
+  <div class="box"><h2>Прогноз повторов, 14 дней</h2>${bars(s.forecast,'n',false)}</div>
+  <div class="box"><h2>Термины и сю · ха · ри</h2>${s.by_level.length?'<table>'+s.by_level.map(r=>`<tr><td>${LV[r.level]||r.level}<div class="meter"><i style="width:${r.acc}%;background:${col(r.acc)}"></i></div></td><td class="n">${pct(r.acc)}</td></tr>`).join('')+'</table>':'<div class="empty">Пока нет ответов</div>'}
+   <p class="hint">Знать — факты и классификации. Понимать — различия и причины. Применять — случаи клиентов.</p></div>
+ </div>
+ ${(s.asked||[]).length?`<div class="box" style="margin-top:14px"><h2>🤔 Что ты просишь объяснить</h2><p class="hint" style="margin-top:0">Красное — ещё не отмечено «Понятно». Такие темы стоит повторить.</p>${s.asked.map(a=>`<div class="quest"><span class="ok">${a.understood?'✅':'🔴'}</span><span class="t">${e(a.title)}<br><small><a href="#" onclick="${a.kind=='free'?`explain('free',null,${JSON.stringify(a.title).replace(/"/g,'&quot;')})`:`explain('${a.kind}',${a.ref})`};return false">объяснить ещё раз</a></small></span></div>`).join('')}</div>`:''}`;
+ $('ss').onchange=()=>loadStats($('ss').value);}
+async function loadErrors(subject){
+ if(!SUBJ.length)SUBJ=(await get('overview')).subjects;
+ const s=await get('stats'+(subject?'?subject='+subject:''));const r=s.repeat_errors;
+ $('v-errors').innerHTML=`<div class="filters"><select id="es">${subjOptions(subject)}</select></div><div class="box"><h2>Повторные ошибки</h2>${r.length?`<p class="hint" style="margin-top:0">Карточки, где ошибся два раза и больше. 😬 — среди ошибок была уверенная: такое опаснее всего.</p>
+  <table>${r.map(x=>`<tr><td>${e(x.question)}<br><small style="color:var(--mute)">→ ${e(x.answer)}</small></td><td class="n">${x.wrong}×${x.conf_wrong?' 😬':''}</td></tr>`).join('')}</table>
+  <div class="row"><button class="btn pri" id="cram" style="flex:0 1 260px">Прогнать эти карточки</button></div>`:'<div class="empty">Повторных ошибок нет.</div>'}</div>`;
+ $('es').onchange=()=>loadErrors($('es').value);
+ if($('cram'))$('cram').onclick=()=>startSession('errors',subject||0,0);}
+
+refreshWho();
+function toast(t,cls){const d=document.createElement('div');d.className='toast '+(cls||'');d.textContent=t;$('toasts').appendChild(d);setTimeout(()=>d.remove(),cls=='coin'?2200:4500)}
+let WHO={};
+function setWho(mon){if(mon!=null)WHO.mon=mon;$('who').innerHTML=[e(WHO.name||''),WHO.belt,`<span class="coins">${WHO.mon??0} 🪙</span>`,WHO.streak!=null?'🔥 '+WHO.streak:''].filter(Boolean).join(' · ')}
+function whoFrom(g){const op=new Set(g.opened||[]);return {belt:op.has('mastery')?g.rank.emoji+' '+g.rank.name:'',mon:g.mon,streak:op.has('streak')?g.streak:null}}
+async function refreshWho(){try{const [s,g]=await Promise.all([get('stats'),get('game')]);WHO={name:s.name,...whoFrom(g)};setWho()}
+ catch(_){document.body.innerHTML='<main><div class="box center">Ссылка недействительна. Возьми свежую в боте: кнопка «🌐 Веб-версия».</div></main>'}}
+const INTRO=`<div class="box intro" id="intro"><h2>Твой сад</h2><ul style="padding-left:18px;margin:0">
+ <li>🌱 <b>Дерево растёт, пока ты учишься.</b> Каждый ответ на карточку — полив: +1 к росту. Верный ответ в тесте или ответ своими словами — ещё +1.</li>
+ <li>🪙 <b>За ответы приходят монеты.</b> Для начала их хватит на росток сакуры: купи его и посади.</li>
+ <li>🥀 Два дня без занятий — дерево вянет, но не погибает: пара ответов, и оно оживёт.</li>
+ <li>🔓 <b>Остальное откроется по мере роста дерева</b> — по одной вещи за раз, с объяснением.</li></ul>
+ <div class="row"><button class="btn pri" style="flex:0 1 220px" onclick="introSeen()">Понятно</button></div></div>`;
+function introSeen(){try{localStorage.setItem('psy_intro','1')}catch(_){}const i=$('intro');if(i)i.remove()}
+function introShown(){try{return localStorage.getItem('psy_intro')=='1'}catch(_){return false}}
+async function plantTree(code){const r=await post('plant',{species:code});toast(r.ok?r.text:'⛔ '+r.error);if(r.ok)loadDojo()}
+async function buyItem(code){const r=await post('buy',{item:code});toast(r.ok?r.text:'⛔ '+r.error);(r.events||[]).forEach((t,i)=>setTimeout(()=>toast(t),500+i*700));if(r.ok)loadDojo()}
+// Сад раскрывается поэтапно: показываем только открытые механики и одну следующую цель с замочком
+async function loadDojo(){const p=await get('game?full=1');const r=p.rank, P=p.plant, a=P.active, op=new Set(p.opened);
+ Object.assign(WHO,whoFrom(p));setWho();
+ let h=introShown()?'':INTRO;
+ if(p.new_unlock)h+=`<div class="box intro" style="margin-top:14px"><h2>🔓 Новое: ${p.new_unlock.emoji} ${e(p.new_unlock.title)}</h2><p style="margin:0">${e(p.new_unlock.text)}</p></div>`;
+ if(!a&&p.sprout.free){h+=`<div class="box" style="margin-top:14px"><h2>Выбери следующее дерево</h2><p class="hint" style="margin-top:0">Посадка бесплатная. Вот как каждое выглядит в цвету:</p>
+  <div class="species">${P.species.map(sp=>`<div class="btn" style="cursor:default">${sp.svg}<b>${sp.emoji} ${e(sp.name)}</b><br><small class="hint">${e(sp.about)}</small><div class="row" style="margin-top:8px"><button class="btn sm pri" onclick="plantTree('${sp.code}')">Посадить</button></div></div>`).join('')}</div></div>`;}
+ else if(!a){const sp=P.species[0],price=p.sprout.price;
+  h+=`<div class="box" style="margin-top:14px"><h2>🛒 Лавка</h2><div class="species"><div class="btn" style="cursor:default">${sp.svg}<b>🌸 Росток сакуры</b><br><small class="hint">Вырастет в цветущую сакуру, пока ты учишься.</small>
+   <div class="row" style="margin-top:8px"><button class="btn sm pri" onclick="plantTree('${sp.code}')"${p.mon<price?' disabled style="opacity:.5"':''}>Купить и посадить · ${price} 🪙</button></div></div></div>
+   <p class="hint">У тебя ${p.mon} 🪙.${p.mon<price?' Ответь на пару карточек — монеты придут.':''}</p></div>`;}
+ else{const pct=Math.round(100*(a.growth-a.from)/(a.to-a.from));
+  const water=a.thirsty?`<span class="water dry">🥀 Хочет пить: ${a.days_dry} дн. без занятий — ответь хотя бы на одну карточку</span>`
+   :a.watered_today?'<span class="water">💧 Полито сегодня</span>':'<span class="water">💧 Сегодня ещё не полито</span>';
+  h+=`<div class="box" style="margin-top:14px;padding:10px"><div class="scene">${a.svg}<div class="tag">${a.emoji} ${e(a.name)} · <b>${e(a.stage_name)}</b></div></div>
+   <div style="padding:8px 6px 2px"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><b>Рост: ${a.growth} из ${a.to}</b>${water}</div>
+   <div class="bar"><i style="width:${pct}%"></i></div><small class="hint">До стадии «${e(a.next_name)}» осталось ${a.to-a.growth}. Рост: +1 за каждый ответ, ещё +1 за верный тест или ответ своими словами${op.has('fertilizer')?', +25 за удобрение':''}.</small>
+   <div class="row"><button class="btn pri" onclick="tab('study')">📚 Полить: ответить на карточки</button>${op.has('fertilizer')?`<button class="btn" onclick="buyItem('fertilizer')"${p.mon<30?' disabled style="opacity:.5"':''}>🧪 Удобрение +25 · 30 🪙</button>`:''}</div></div></div>
+  <div class="box" style="margin-top:14px"><h2>Как будет расти твоё дерево</h2><div class="stages">${a.stages.map((st,i)=>`<div class="st${i==a.stage?' now':i>a.stage?' future':''}">${st.svg}${i<a.stage?'✓ ':''}${e(st.name)}<small>${i==a.stage?'сейчас':i>a.stage?'с роста '+st.at:'пройдено'}</small></div>`).join('')}</div></div>`;}
+ const n=p.next_unlock;
+ if(n&&(a||p.sprout.free))h+=`<div class="box" style="margin-top:14px;border-style:dashed"><b>🔒 На стадии «${e(n.stage)}» откроется: ${n.emoji} ${e(n.title)}</b><br><small class="hint">Ещё ${n.left} роста. Растёт от ответов на карточки.</small></div>`;
+ const lv=p.seal_levels, earn=['Любой честный ответ +1 — даже «не вспомнил»: честность важнее.','Верный тест +2.','Ответ своими словами, который проверил ИИ, +4.','Исправленная старая ошибка +3.','Победа над карточкой, на которой было 3 ошибки и больше, +10.'];
+ if(op.has('quests'))earn.push('Каждые 5 верных подряд +3.','Все повторы на сегодня разобраны +10.','Задания дня — бонусы.');
+ const wallet=`<div class="box"><h2>🪙 Кошелёк: ${p.mon} монет</h2><p class="hint" style="margin-top:0">Сегодня заработано +${p.earned_today}.${op.has('streak')?` 🔥 Дней подряд: ${p.streak}. 🧧 Амулетов: ${p.omamori} из ${p.omamori_max}.`:''}</p>
+   <details><summary>За что дают монеты</summary><p class="hint">${earn.join(' ')}</p></details></div>`;
+ const quests=op.has('quests')?`<div class="box"><h2>✅ Задания на сегодня</h2>${p.quests.map(q=>`<div class="quest"><span class="ok">${q.done?'✅':'▫️'}</span><span class="t">${e(q.text)}<div class="bar" style="height:6px"><i style="width:${100*q.progress/q.target}%"></i></div><small>${q.progress}/${q.target} · +${q.reward} 🪙</small></span></div>`).join('')}
+   <p class="hint">Все три — сундук +${p.chest} 🪙.</p></div>`:'';
+ h+=`<div class="grid">${wallet}${quests}</div>`;
+ if(op.has('streak')||op.has('decor'))h+=`<div class="box" style="margin-top:14px"><h2>🛒 Лавка</h2><div class="shop">${p.shop.map(i=>{const own=p.decor.includes(i.code);return `<button class="btn" onclick="buyItem('${i.code}')"${(p.mon<i.price||own)?' disabled style="opacity:.55"':''}><b>${i.emoji}</b>${e(i.name)}<br><small>${own?'✓ стоит в саду':i.price+' 🪙'}${i.desc?' · '+e(i.desc):''}</small></button>`}).join('')}</div>
+  ${op.has('decor')?'<p class="hint">Украшения появляются на картинке сада рядом с деревом.</p>':''}</div>`;
+ const rank=op.has('mastery')?`<div class="box"><h2>🥋 Уровень знаний: ${r.emoji} ${r.name}</h2><div class="bar"><i style="width:${r.next_at?Math.round(100*(r.points-r.from)/(r.next_at-r.from)):100}%"></i></div>
+   <p class="hint">${r.next_at?`${r.points} из ${r.next_at} очков до ${r.next_emoji} ${r.next_name}.`:'Высший пояс.'} Очки дают карточки, которые прочно держатся в памяти: дольше суток — 1, дольше недели — 3, дольше трёх недель — 5.</p></div>`:'';
+ const week=op.has('week')?`<div class="box"><h2>🏆 Соревнование недели</h2><table>${p.week.map((w,i)=>`<tr><td>${['🥇','🥈','🥉'][i]||'•'} ${e(w.name)}${w.id==p.me?' (ты)':''}</td><td class="n">${w.mon} 🪙</td><td class="n">🔥 ${w.streak}</td></tr>`).join('')}</table>
+   <p class="hint">Считаются монеты, заработанные с понедельника. В понедельник итоги, победителю +30 🪙.</p></div>`:'';
+ if(rank||week)h+=`<div class="grid" style="margin-top:14px">${rank}${week}</div>`;
+ if(op.has('mastery'))h+=`<div class="box" style="margin-top:14px"><h2>🔖 Печати за лекции</h2><p class="hint" style="margin-top:0">${Object.values(lv).map(v=>v.emoji+' '+v.name+' — '+v.desc).join('; ')}.</p>
+   ${p.seals.map(l=>`<div class="seal"><span>${l.level?lv[l.level].emoji:'▫️'}</span><div>${e(l.title)}<br><small class="hint">${e(l.subject)} · ${l.level?lv[l.level].name:'ещё не начата'}</small></div></div>`).join('')||'<p class="empty">Лекций пока нет</p>'}</div>`;
+ if(op.has('badges'))h+=`<div class="box" style="margin-top:14px"><h2>🏅 Значки · ${p.badges.filter(b=>b.got).length} из ${p.badges.length}</h2><div class="badges">${p.badges.map(b=>`<div class="badge${b.got?'':' off'}"><b>${b.emoji}</b>${e(b.title)}<small>${e(b.desc)} · +${b.reward}</small></div>`).join('')}</div></div>`;
+ if(P.collection.length)h+=`<div class="box" style="margin-top:14px"><h2>🌳 Выращенные деревья</h2><div class="species">${P.collection.map(c=>`<div class="btn" style="cursor:default">${c.svg}<b>${c.emoji} ${e(c.name)}</b><br><small class="hint">выращено ${c.done_at}</small></div>`).join('')}</div></div>`;
+ const got=p.unlocks.filter(u=>u.open&&u.code!='garden');
+ if(got.length)h+=`<details class="box" style="margin-top:14px"><summary><b>Что уже открыто</b> · ${got.length} из ${p.unlocks.length-1}</summary>${got.map(u=>`<p style="margin:8px 0">${u.emoji} <b>${e(u.title)}.</b> ${e(u.text)}</p>`).join('')}</details>`;
+ h+=`<div class="row"><button class="btn" style="flex:0 1 240px" onclick="try{localStorage.removeItem('psy_intro')}catch(_){};loadDojo()">❓ Как это работает</button></div>`;
+ $('v-dojo').innerHTML=h;}
+async function homeTree(){try{const p=await get('game');const a=p.plant.active;const el=$('hometree');if(!el)return;
+ const n=p.next_unlock;
+ el.innerHTML=a?`<div class="box" style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;padding:12px"><div style="width:180px;max-width:100%" class="scene">${a.svg}</div>
+  <div style="flex:1;min-width:200px"><h3>${a.emoji} Твоё дерево: ${e(a.stage_name)}</h3><div class="bar"><i style="width:${Math.round(100*(a.growth-a.from)/(a.to-a.from))}%"></i></div>
+  <small class="hint">${a.thirsty?'🥀 Хочет пить — ответь хотя бы на одну карточку.':a.watered_today?'💧 Полито сегодня.':'💧 Сегодня ещё не полито: каждый ответ — полив.'} У тебя ${p.mon} 🪙.${n?` 🔒 Скоро: ${n.emoji} ${e(n.title)} — ещё ${n.left} роста.`:''}</small>
+  ${p.new_unlock?`<div class="hint" style="margin-top:6px">🔓 Новое в саду: ${p.new_unlock.emoji} ${e(p.new_unlock.title)}</div>`:''}
+  <div class="row"><button class="btn sm" onclick="tab('dojo')" style="flex:0 1 180px">🌳 Открыть сад</button></div></div></div>`
+ :p.sprout.free?`<div class="box" style="padding:14px"><h3>🌱 Посади следующее дерево</h3><p class="hint" style="margin-top:4px">Посадка бесплатная: сакура, клён, сосна, глициния или бамбук.</p><div class="row"><button class="btn sm pri" onclick="tab('dojo')" style="flex:0 1 200px">Выбрать дерево</button></div></div>`
+ :`<div class="box" style="padding:14px"><h3>🌱 Купи росток и посади</h3><p class="hint" style="margin-top:4px">Он будет расти, пока ты учишься: каждый ответ — полив. Росток сакуры стоит ${p.sprout.price} 🪙, у тебя ${p.mon} 🪙.</p><div class="row"><button class="btn sm pri" onclick="tab('dojo')" style="flex:0 1 200px">В сад</button></div></div>`;}catch(_){}}
+// ---------- аудиолекция: плеер живёт вне сменяемых экранов ----------
+let AU=null,AUDIO_REQUEST=0,AUDIO_LAST_SAVE=0,AUDIO_OBSERVED=0,AUDIO_SAVE_CHAIN=Promise.resolve();
+const audioElement=()=>$('lecture-audio');
+const audioActiveKey=()=>`fukushu.audio.active.${KEY}`;
+function audioRemember(id){try{localStorage.setItem(audioActiveKey(),String(id))}catch(_){}}
+function audioForget(){try{localStorage.removeItem(audioActiveKey())}catch(_){}}
+function audioRestore(explicitId=0){if(AU)return Promise.resolve();let raw;try{raw=explicitId||localStorage.getItem(audioActiveKey())}catch(_){raw=explicitId}const id=Number(raw);if(!Number.isSafeInteger(id)||id<1){if(raw)audioForget();return Promise.resolve()}return audioOpen(id,false)}
+function audioVoiceActive(){return typeof LU!=='undefined'&&!!(LU?.recording||LU?.micPending)}
+function audioLayout(){const dock=$('audio-dock');if(!dock)return;document.body.classList.toggle('has-audio',!dock.hidden);document.documentElement.style.setProperty('--audio-space',dock.hidden?'0px':Math.ceil(dock.getBoundingClientRect().height)+'px')}
+function audioDraw(){const dock=$('audio-dock');if(!dock)return;dock.hidden=!AU;if(!AU){audioLayout();return}const a=AU;
+ $('audio-title').textContent=a.title||'Аудиолекция';$('audio-speed').value=String(a.playback_rate||1);$('audio-speed').disabled=!a.ready;
+ audioElement().hidden=!a.ready;$('audio-questions').disabled=false;$('audio-sections').disabled=false;$('audio-retry').hidden=!a.error&&!a.pending;
+ $('audio-resume').hidden=!a.pausedForVoice||!a.ready;$('audio-resume').disabled=audioVoiceActive();
+ const status=$('audio-status');status.classList.toggle('error',!!a.error||!!a.saveError);status.textContent=a.error||a.saveError||a.notice||(a.loading?'Открываю аудиозапись…':a.pausedForVoice?'Лекция на паузе для голосового ответа. Продолжи, когда закончишь.':'Место прослушивания сохраняется. Можно перейти к вопросам или практике.');audioLayout()}
+function audioProgressPayload(){const a=AU,el=audioElement();if(!a?.ready||a.restoring||!a.media_id||!Number.isFinite(el.currentTime))return null;AUDIO_OBSERVED=Math.max(Date.now(),AUDIO_OBSERVED+1);return {op:'progress',lecture_id:a.lecture_id,media_id:a.media_id,position:Math.max(0,el.currentTime),playback_rate:el.playbackRate||1,observed_at:AUDIO_OBSERVED}}
+function audioSave(urgent=false){const payload=audioProgressPayload();if(!payload)return Promise.resolve();const current=AU;AUDIO_LAST_SAVE=Date.now();
+ if(urgent){try{const sent=fetch(API+'audio',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),keepalive:true});sent.catch(()=>{});return sent}catch(_){return Promise.resolve()}}
+ const task=AUDIO_SAVE_CHAIN.catch(()=>{}).then(()=>post('audio',payload));AUDIO_SAVE_CHAIN=task.catch(()=>{});return task.then(()=>{if(AU===current&&current.saveError){current.saveError='';audioDraw()}},()=>{if(AU===current){current.saveError='Не удалось сохранить место. Повторю при следующей паузе.';audioDraw()}})}
+function audioDetach(){const el=audioElement();el.onloadedmetadata=null;el.ontimeupdate=null;el.onpause=null;el.onratechange=null;el.onseeked=null;el.onended=null;el.onerror=null;el.onplay=null;el.pause();el.removeAttribute('src');el.load()}
+async function audioPlay(){const a=AU,el=audioElement();if(!a?.ready)return;if(audioVoiceActive()){a.notice='Сначала закончи голосовой ответ, затем продолжи лекцию.';audioDraw();return}a.pausedForVoice=false;a.restoreDisabled=false;audioRemember(a.lecture_id);a.notice='';a.error='';audioDraw();try{await el.play()}catch(_){if(AU===a){a.notice='Нажми Play на плеере, чтобы начать прослушивание.';audioDraw()}}}
+async function audioOpen(id,play=true){id=Number(id);if(!Number.isInteger(id)||id<1)return;if(AU?.lecture_id===id&&AU.ready){if(play)await audioPlay();return}const request=++AUDIO_REQUEST;audioSave();audioDetach();const a=AU={lecture_id:id,title:'Открываю аудиолекцию…',loading:true,ready:false,shouldPlay:play,playback_rate:1,error:'',notice:''};audioDraw();
+ try{let info=await get('audio?lecture_id='+id);if(AUDIO_REQUEST!==request||AU!==a)return;
+  if(info.state==='needs_conversion'){a.title=info.title;a.notice='Готовлю запись для плеера. Пока можно проходить вопросы.';audioDraw();info=await post('audio',{op:'prepare',lecture_id:id})}
+  while(info.pending){if(AUDIO_REQUEST!==request||AU!==a)return;a.title=info.title||a.title;a.notice=info.notice||'Готовлю запись для плеера. Пока можно проходить вопросы.';audioDraw();await new Promise(resolve=>setTimeout(resolve,1500));if(AUDIO_REQUEST!==request||AU!==a)return;info=await post('audio',{op:'poll',job:info.job})}
+  if(AUDIO_REQUEST!==request||AU!==a)return;Object.assign(a,info,{lecture_id:id,loading:false});
+  if(!info.available||!info.media_id){audioForget();a.pending=!!info.pending;a.notice=info.notice||(info.pending?'Готовлю запись для плеера. Попробуй открыть её чуть позже.':'У этого материала пока нет доступной аудиозаписи. Можно заниматься по вопросам и разделам.');audioDraw();return}
+  const el=audioElement();a.ready=true;a.restoring=true;a.playback_rate=Number(info.playback_rate)||1;a.notice=info.notice||'';a.url=API+'audio_stream?lecture_id='+id+'&media_id='+encodeURIComponent(info.media_id);AUDIO_LAST_SAVE=Date.now();
+  if(!a.restoreDisabled)audioRemember(id);
+  el.onloadedmetadata=()=>{if(AU!==a||AUDIO_REQUEST!==request)return;const duration=el.duration,saved=Math.max(0,Number(info.position)||0);try{el.currentTime=Number.isFinite(duration)&&duration>0?Math.min(saved,Math.max(0,duration-.1)):saved;el.playbackRate=a.playback_rate}catch(_){}a.restoring=false;audioDraw();if(a.shouldPlay)audioPlay()};
+  el.ontimeupdate=()=>{if(AU===a&&!a.restoring&&Date.now()-AUDIO_LAST_SAVE>=10000)audioSave()};
+  el.onpause=()=>{if(AU===a&&!a.restoring)audioSave()};el.onseeked=()=>{if(AU===a&&!a.restoring)audioSave()};
+  el.onratechange=()=>{if(AU!==a||a.restoring)return;a.playback_rate=el.playbackRate;audioDraw();audioSave()};
+  el.onended=()=>{if(AU!==a)return;audioSave();a.notice='Лекция закончилась. Можно продолжить практику или вернуться к ней завтра.';audioDraw()};
+  el.onerror=()=>{if(AU!==a||AUDIO_REQUEST!==request)return;
+   const failed=()=>{if(AU!==a)return;a.restoring=false;a.error='Не получилось воспроизвести запись. Попробуй открыть её ещё раз.';a.ready=false;audioDraw()};
+   if(typeof window!=='undefined'&&window.FukushuConnection?.hosted&&!a.reconnectTried){a.reconnectTried=true;const old=a.url;window.FukushuConnection.reconnect(true).then(()=>{if(AU===a&&a.url===old)failed()},failed);return}failed()};
+  el.onplay=()=>{if(AU!==a)return;if(audioVoiceActive()){el.pause();a.pausedForVoice=true;a.notice='Лекция на паузе, пока открыт микрофон.'}else{a.pausedForVoice=false;a.restoreDisabled=false;audioRemember(id);a.notice='';a.error=''}audioDraw()};
+  el.src=a.url;el.load();audioDraw()
+ }catch(_){if(AU===a&&AUDIO_REQUEST===request){a.loading=false;a.error='Не получилось открыть аудиозапись. Проверь соединение и попробуй ещё раз.';audioDraw()}}}
+function audioReconnect(){const a=AU,el=audioElement();if(!a?.ready||!a.media_id)return;
+ const url=API+'audio_stream?lecture_id='+a.lecture_id+'&media_id='+encodeURIComponent(a.media_id);if(a.url===url)return;
+ const position=Number.isFinite(el.currentTime)?el.currentTime:0,rate=el.playbackRate||a.playback_rate||1;const wasPlaying=!el.paused;
+ a.restoring=true;a.shouldPlay=false;el.pause();a.url=url;a.error='';a.loading=true;a.notice='Переподключаю аудиолекцию…';audioDraw();
+ el.onloadedmetadata=()=>{if(AU!==a)return;try{el.currentTime=Number.isFinite(el.duration)?Math.min(position,el.duration):position;el.playbackRate=rate}catch(_){}a.playback_rate=rate;a.restoring=false;a.loading=false;a.reconnectTried=false;a.notice=wasPlaying?'Связь восстановлена. Нажми Play, чтобы продолжить лекцию.':'Место прослушивания сохранено. Можно продолжить с паузы.';audioDraw()};
+ el.src=url;el.load()}
+window.addEventListener('fukushu:backend-changed',audioReconnect);
+function audioSpeed(value){const rate=Number(value);if(AU?.ready&&[.75,1,1.25,1.5,1.75,2].includes(rate)){audioElement().playbackRate=rate;AU.playback_rate=rate;audioSave();audioDraw()}}
+function audioPauseForVoice(){if(!AU?.ready)return;const el=audioElement();if(!el.paused){AU.pausedForVoice=true;AU.notice='Лекция на паузе для голосового ответа.';el.pause();audioSave()}audioDraw()}
+function audioRefreshVoice(){if(AU)audioDraw()}
+function audioClose(){++AUDIO_REQUEST;audioSave();audioDetach();audioForget();AU=null;audioDraw()}
+async function audioStudy(id,subject=0){const opening=audioOpen(id);await startSession('lecture',subject,0,id);await opening}
+async function audioQuestions(){if(AU)await startSession('lecture',0,0,AU.lecture_id)}
+async function audioSections(){if(AU)await openLesson(AU.lecture_id)}
+async function audioRepeat(id,subject=0){audioForget();if(AU){AU.shouldPlay=false;AU.restoreDisabled=true;if(AU.ready){audioElement().pause();audioSave()}}await startSession('due',subject,0,id)}
+if(typeof window.addEventListener==='function'){window.addEventListener('pagehide',()=>audioSave(true));window.addEventListener('resize',audioLayout)}
+if(typeof ResizeObserver!=='undefined')new ResizeObserver(audioLayout).observe($('audio-dock'));
+// ---------- смысловые разделы и «Объясню сам» ----------
+let LU=null;
+const LEARN_STATUS={new:'Ещё не проверяли',partial:'Нужно уточнить',wrong:'Стоит повторить',understood:'Понимание подтверждено'};
+function learnKey(l,s){return `fukushu.learn.${KEY}.${l.id}.${l.view?.source_hash||''}.${s}`}
+function learnDraft(l,s){if(l.drafts[s]!==undefined)return l.drafts[s];try{const raw=localStorage.getItem(learnKey(l,s));if(raw!=null)return l.drafts[s]=raw}catch(_){}const a=l.view?.sections.find(x=>x.id===s)?.last_attempt;return l.drafts[s]=a&&(a.status!=='graded'||a.verdict!=='correct')?a.answer:''}
+function learnSet(){const l=LU;if(!l||!l.section)return;const value=$('learn-answer').value;l.drafts[l.section]=value;l.requests[l.section]=null;try{localStorage.setItem(learnKey(l,l.section),value)}catch(_){}if($('learn-draft'))$('learn-draft').textContent='Черновик сохранён в этом браузере.'}
+function learnLeave(){const l=LU;if(!l)return;learnStop(true);LU=null;if(typeof history!=='undefined'){if(typeof window!=='undefined'&&window.FukushuConnection)window.FukushuConnection.setRoute('study');else if(location.hash.startsWith('#learn-'))history.replaceState(null,'',location.pathname+location.search)}}
+function learnSection(s){const l=LU;if(!l||l.recording||l.micPending||l.section===s||!l.view?.sections.some(x=>x.id===s))return;l.section=s;l.error='';l.notice='';learnDraw();const heading=$('learn-section-title');heading?.focus({preventScroll:true});heading?.scrollIntoView({block:'start',behavior:'auto'})}
+function learnFeedback(a){if(!a)return '';const labels={correct:'Понимание подтверждено',partial:'Есть основа, осталось уточнить',wrong:'Давай разберём ещё раз'};
+ if(a.status==='pending')return '<div class="learn-feedback" role="status">Ответ сохранён. Проверка ещё выполняется. Если она прервалась, повтори отправку.</div>';
+ if(a.status==='failed')return `<div class="learn-feedback" role="status"><b>Ответ сохранён, проверка не закончилась</b><p>${e(a.feedback||'Попробуй проверить ещё раз.')}</p></div>`;
+ return `<div class="learn-feedback ${e(a.verdict)}" role="status"><b>${e(labels[a.verdict]||'Проверка завершена')}</b><p class="learn-text">${e(a.feedback)}</p>${a.missing?.length?`<p><b>Что стоит добавить</b></p><ul>${a.missing.map(x=>`<li>${e(x)}</li>`).join('')}</ul>`:''}${a.next_question?`<p><b>Вопрос для уточнения:</b> ${e(a.next_question)}</p>`:''}<details><summary>Мой ответ</summary><p class="learn-text">${e(a.answer)}</p></details></div>`}
+function learnDraw(){const l=LU;if(!l)return;const v=l.view,sections=v?.sections||[],s=sections.find(x=>x.id===l.section)||sections[0];if(s)l.section=s.id;const p=v?.progress||{understood:0,total:0};
+ $('v-study').innerHTML=`<div class="learn-head"><button class="btn sm learn-back" onclick="pickLecture(0)">← К лекциям</button><h2>${e(v?.title||'Смысловые разделы лекции')}</h2><p class="hint">Прочитай раздел, затем объясни его своими словами. Можно идти в любом порядке.</p><div class="row audio-lesson-action"><button class="btn sm" onclick="audioOpen(${l.id})">Слушать лектора</button><button class="btn sm" onclick="startSession('lecture',0,0,${l.id})">Все вопросы лекции</button></div>${p.total?`<div class="learn-count">Понимание подтверждено: <b>${p.understood} из ${p.total}</b></div><div class="progress learn-progress" role="progressbar" aria-label="Проверено разделов" aria-valuemin="0" aria-valuemax="${p.total}" aria-valuenow="${p.understood}"><i style="width:${100*p.understood/p.total}%"></i></div>`:''}</div>
+ ${s?`<div class="learn-layout"><aside class="learn-sections" aria-label="Разделы лекции">${sections.map((x,i)=>`<button class="btn learn-section" ${l.recording||l.micPending?'disabled':''} ${x.id===s.id?'aria-current="step"':''} onclick="learnSection('${e(x.id)}')"><b>${i+1}. ${e(x.title)}</b><small>${e(LEARN_STATUS[x.status]||LEARN_STATUS.new)}</small></button>`).join('')}</aside><article class="box learn-body"><h3 id="learn-section-title" tabindex="-1" style="scroll-margin-top:16px">${e(s.title)}</h3><div class="learn-text">${e(s.summary)}</div>${s.example?`<div class="learn-example"><b>Простой пример</b><p class="learn-text">${e(s.example)}</p></div>`:''}<div class="learn-check" data-recording="${!!l.recording}"><h3>Объясню сам</h3><p class="learn-question">${e(s.question)}</p><p class="hint">Объясни суть своими словами. Если помогает, приведи свой пример. Проверяется смысл, а не точность формулировок.</p><label for="learn-answer">Моё объяснение</label><textarea id="learn-answer" maxlength="20000" oninput="learnSet()" ${l.busy||l.recording||l.micPending?'disabled':''} aria-describedby="learn-draft learn-status">${e(learnDraft(l,s.id))}</textarea><div id="learn-draft" class="hint">${learnDraft(l,s.id)?'Черновик сохранён в этом браузере.':'Можно написать ответ или записать голосом.'}</div><div class="row learn-actions"><button class="btn pri" onclick="learnSubmit()" ${l.busy||l.recording||l.micPending?'disabled':''}>${l.busy?'Подожди…':s.last_attempt?.status==='failed'?'Проверить ещё раз':s.last_attempt?.status==='graded'&&s.last_attempt.verdict!=='correct'?'Проверить дополнение':'Проверить понимание'}</button><button class="btn" onclick="learnRecord()" ${l.busy||l.micPending?'disabled':''}>${l.recording?'Закончить запись':l.micPending?'Открываю микрофон…':'Записать голосом'}</button><button class="btn" onclick="$('learn-file').click()" ${l.busy||l.recording||l.micPending?'disabled':''}>Загрузить аудио</button><input id="learn-file" type="file" accept="audio/*,.webm,.ogg,.mp3,.m4a,.wav,.flac" hidden onchange="learnFile(this)"></div><p id="learn-status" data-fx-busy="${!!l.busy}" data-fx-state="solving" class="learn-status loading-line ${l.error?'learn-error':l.recording?'recording':''}" role="status" aria-live="polite">${e(l.error||l.notice|| (l.recording?'Идёт запись. Нажми «Закончить запись».':l.busy?'Обрабатываю запрос через Codex. Можно вернуться к лекции позже.':''))}</p><p class="hint">После голосового ответа появится текст: исправь ошибки распознавания и нажми «Проверить понимание».</p>${learnFeedback(s.last_attempt)}</div><div class="row learn-footer"><button class="btn sm" onclick="explain('lecture',${l.id})">Читать полный разбор</button>${sections.indexOf(s)<sections.length-1?`<button class="btn sm" onclick="learnSection('${sections[sections.indexOf(s)+1].id}')" ${l.recording||l.micPending?'disabled':''}>Следующий раздел →</button>`:''}</div></article></div>`:`<div class="box"><p class="loading-line" data-fx-busy="${!!l.busy}" data-fx-state="weaving" role="status">${e(l.error||l.notice||v?.notice||'Готовлю разделы по всей лекции через Codex. Это может занять несколько минут.')}</p>${!l.busy?`<button class="btn" onclick="openLesson(${l.id})">Попробовать ещё раз</button>`:''}</div>`}`;
 }
-again.onclick = () => tryOpen(0);
-if (!/^[A-Za-z0-9_-]{8,}$/.test(key)) m.textContent = 'Ссылка неполная. Возьми свою в боте: кнопка «🌐 Веб-версия».';
-else tryOpen(0);
-</script></body></html>
+function learnJobKey(l){return `fukushu.learn.job.${KEY}.${l.id}`}
+async function learnWait(l,r){if(r.job)try{localStorage.setItem(learnJobKey(l),r.job)}catch(_){}try{while(r.pending){if(LU!==l)return null;await new Promise(resolve=>setTimeout(resolve,1500));if(LU!==l)return null;r=await post('learning',{op:'poll',job:r.job})}try{localStorage.removeItem(learnJobKey(l))}catch(_){}return LU===l?r:null}catch(err){try{localStorage.removeItem(learnJobKey(l))}catch(_){}throw err}}
+function learnApply(l,r){if(!r)return;if(r.view){l.view=r.view;if(r.section_id)l.section=r.section_id;l.notice=r.view.notice||'';for(const s of r.view.sections){const a=s.last_attempt;if(a&&(a.status!=='graded'||a.verdict!=='correct')&&a.request_id){if(learnDraft(l,s.id).trim()===a.answer.trim()){l.requests[s.id]=a.request_id;l.kinds[s.id]=a.input_kind}else l.requests[s.id]=null}}}
+ if(r.transcript!==undefined){if(r.source_hash!==l.view?.source_hash)throw 'Материал изменился. Открой лекцию ещё раз.';l.section=r.section_id;l.drafts[l.section]=r.transcript;l.kinds[l.section]='voice';l.requests[l.section]=null;try{localStorage.setItem(learnKey(l,l.section),r.transcript)}catch(_){}l.notice='Речь распознана. Проверь текст, затем отправь его на проверку.'}}
+async function openLesson(id){if(!await reviewBeforeSession())return;if(await tabOnly('study')==null)return;learnLeave();S=null;const l=LU={id,view:null,section:null,drafts:{},requests:{},kinds:{},busy:true,error:'',notice:''};if(typeof history!=='undefined'){if(typeof window!=='undefined'&&window.FukushuConnection)window.FukushuConnection.setRoute('learn-'+id);else history.replaceState(null,'',location.pathname+location.search+'#learn-'+id)};learnDraw();
+ try{const saved=await post('learning',{op:'view',lecture_id:id});if(LU!==l)return;learnApply(l,saved);learnDraw();let previous;try{previous=localStorage.getItem(learnJobKey(l))}catch(_){}let r;if(previous){try{r=await learnWait(l,await post('learning',{op:'poll',job:previous}));if(LU!==l)return;if(r?.view){const current=await post('learning',{op:'view',lecture_id:id});if(LU!==l)return;r={...r,view:current.view}}}catch(err){try{localStorage.removeItem(learnJobKey(l))}catch(_){}throw err}}else r=await learnWait(l,await post('learning',{op:'open',lecture_id:id}));if(LU!==l)return;learnApply(l,r)}catch(err){if(LU===l)l.error=String(err)}finally{if(LU===l){l.busy=false;learnDraw()}}}
+async function learnSubmit(){const l=LU;if(!l||l.busy||l.recording||!l.view)return;const s=l.view.sections.find(x=>x.id===l.section),answer=learnDraft(l,s.id).trim();if(!answer){l.error='Сначала объясни раздел своими словами.';learnDraw();$('learn-answer').focus();return}l.error='';l.notice='Проверяю понимание через Codex. Ответ сохраняется в приложении.';l.busy=true;const request=l.requests[s.id]||(l.requests[s.id]=typeof crypto!=='undefined'&&crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+'_'+Math.random().toString(36).slice(2));learnDraw();
+ try{const r=await learnWait(l,await post('learning',{op:'submit',lecture_id:l.id,section_id:s.id,source_hash:l.view.source_hash,answer,input_kind:l.kinds[s.id]||'text',request_id:request}));if(LU!==l)return;learnApply(l,r);const a=l.view.sections.find(x=>x.id===s.id)?.last_attempt;if(a?.status==='graded'&&a.verdict==='correct'){l.drafts[s.id]='';l.requests[s.id]=null;l.kinds[s.id]='text';try{localStorage.removeItem(learnKey(l,s.id))}catch(_){}l.notice='Проверка и прогресс сохранены.'}else if(a?.status==='graded'){l.notice='Проверка сохранена. Дополни объяснение с учётом замечаний.'}}
+ catch(err){if(LU===l)l.error=String(err)}finally{if(LU===l){l.busy=false;learnDraw()}}}
+async function learnUpload(l,blob,mime){if(LU!==l||!l.view)return;if(!blob.size||blob.size>20*1024*1024){l.error='Аудио пустое или больше 20 МБ. Запиши ответ короче.';learnDraw();return}l.busy=true;l.error='';l.notice='Распознаю речь. Затем можно будет исправить текст.';const section=l.section,hash=l.view.source_hash;learnDraw();
+ try{const response=await fetch(API+`learning_voice?lecture_id=${l.id}&section_id=${encodeURIComponent(section)}&source_hash=${hash}`,{method:'POST',headers:{'Content-Type':mime||blob.type},body:blob}),r=await response.json();if(!response.ok)throw r.error||'Не получилось загрузить аудио.';const result=await learnWait(l,r);if(LU===l)learnApply(l,result)}catch(err){if(LU===l)l.error=String(err)}finally{if(LU===l){l.busy=false;learnDraw()}}}
+function learnFile(input){const file=input.files?.[0],l=LU;if(!file||!l||l.busy)return;const types={webm:'audio/webm',ogg:'audio/ogg',oga:'audio/ogg',mp3:'audio/mpeg',m4a:'audio/mp4',mp4:'audio/mp4',wav:'audio/wav',flac:'audio/flac',aac:'audio/aac'};learnUpload(l,file,file.type||types[file.name.split('.').pop().toLowerCase()]||'application/octet-stream')}
+function learnStop(cancel=false){const l=LU;try{if(typeof window!=='undefined')window.FukushuFX?.voiceStop?.()}catch(_){}if(!l)return;if(l.record){l.record.cancelled=cancel;if(l.record.recorder.state!=='inactive')l.record.recorder.stop();l.record.stream.getTracks().forEach(t=>t.stop());clearInterval(l.record.timer)}l.recording=false}
+async function learnRecord(){const l=LU;if(!l||l.busy||l.micPending)return;if(l.recording){learnStop();return}if(!navigator.mediaDevices?.getUserMedia||typeof MediaRecorder==='undefined'){l.error='Этот браузер не умеет записывать голос. Нажми «Загрузить аудио» или ответь текстом.';learnDraw();return}l.micPending=true;l.error='';if(typeof audioPauseForVoice==='function')audioPauseForVoice();learnDraw();
+ try{const stream=await navigator.mediaDevices.getUserMedia({audio:true});if(LU!==l){stream.getTracks().forEach(t=>t.stop());return}const mime=['audio/webm;codecs=opus','audio/ogg;codecs=opus','audio/mp4'].find(x=>MediaRecorder.isTypeSupported(x)),recorder=new MediaRecorder(stream,mime?{mimeType:mime}:undefined),record={stream,recorder,chunks:[],bytes:0,cancelled:false,started:Date.now()};l.record=record;l.recording=true;
+ recorder.ondataavailable=event=>{if(event.data.size){record.chunks.push(event.data);record.bytes+=event.data.size;if(record.bytes>20*1024*1024){l.error='Запись превысила 20 МБ. Запиши ответ короче.';learnStop(true);if(LU===l)learnDraw()}}};
+ recorder.onstop=()=>{try{if(typeof window!=='undefined')window.FukushuFX?.voiceStop?.()}catch(_){}clearInterval(record.timer);stream.getTracks().forEach(t=>t.stop());if(LU===l){l.record=null;l.recording=false;if(!record.cancelled)learnUpload(l,new Blob(record.chunks,{type:recorder.mimeType||mime||'audio/webm'}),recorder.mimeType||mime||'audio/webm');else learnDraw()}if(typeof audioRefreshVoice==='function')audioRefreshVoice()};
+ recorder.onerror=()=>{record.cancelled=true;l.error='Запись прервалась. Проверь доступ к микрофону или загрузи аудиофайл.';learnStop(true);if(LU===l)learnDraw()};recorder.start(1000);try{if(typeof window!=='undefined')window.FukushuFX?.voiceStart?.(stream,'#learn-answer')}catch(_){}record.timer=setInterval(()=>{const seconds=Math.floor((Date.now()-record.started)/1000);if(LU===l&&$('learn-status'))$('learn-status').textContent=`Идёт запись: ${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')}. Максимум 5 минут.`;if(seconds>=300)learnStop()},1000)}
+ catch(_){try{if(typeof window!=='undefined')window.FukushuFX?.voiceStop?.()}catch(_){}if(LU===l){l.recording=false;l.error='Не получилось открыть микрофон. Разреши доступ в браузере или загрузи аудиофайл.';l.record?.stream.getTracks().forEach(t=>t.stop());l.record=null}}
+ finally{if(LU===l){l.micPending=false;learnDraw()}if(typeof audioRefreshVoice==='function')audioRefreshVoice()}}
+if(typeof window.addEventListener==='function')window.addEventListener('pagehide',()=>learnStop(true));
+// ---------- «Объясни проще»: разговор с преподавателем ----------
+let TU=null;
+function tuDraw(){const t=TU,el=$('tutor');if(!t){el.hidden=true;return}el.hidden=false;
+ const first=t.free&&!t.thread;
+ el.innerHTML=`<div class="tutor-head"><span class="teacher-avatar" data-fx="avatar" data-state="${t.busy?'working':'idle'}" aria-hidden="true"></span><b>${e(t.title)}</b><button class="btn sm" style="flex:0 0 auto" onclick="tuClose()" aria-label="Закрыть объяснение">✕</button></div>
+  ${t.msgs.map(m=>`<div class="tmsg${m.me?' me':''}">${e(m.text)}</div>`).join('')}
+  ${t.busy?'<div class="tmsg hint loading-line"><span data-fx="orb" data-state="composing" aria-hidden="true"></span><span>Читаю материал и готовлю объяснение. Первый разбор большой лекции может занять несколько минут.</span></div>':''}
+  ${t.thread&&!t.busy?`<div class="row"><button class="btn sm" onclick="tuAsk('other')">🔄 С другой стороны</button><button class="btn sm" onclick="tuAsk('example')">🧩 Пример</button><button class="btn sm pri" onclick="tuOk()">Понятно ✅</button></div>`:''}
+  ${(t.thread||first)&&!t.busy?`<div class="row"><textarea id="tuq" rows="2" placeholder="${first?'Что непонятно?':'Свой вопрос: что именно непонятно?'}" style="flex:3 1 240px;min-height:0"></textarea><button class="btn sm" onclick="${first?'tuFirst()':'tuAsk()'}">Спросить</button></div>`:''}`;
+ el.scrollTop=t.msgs.length<=1?0:1e6;}
+async function explain(kind,ref,question){const t=TU={title:question||'Объясняю…',msgs:[],busy:true,thread:null};tuDraw();
+ try{const r=await tuRequest(t,{op:'start',kind,ref,question});if(r){if(r.error)throw r.error;
+  Object.assign(t,{thread:r.thread,title:r.title});t.msgs.push({text:r.reply})}}
+ catch(err){t.msgs.push({text:typeof err=='string'?err:'Не получилось объяснить. Попробуй ещё раз.'})}
+ t.busy=false;if(TU===t)tuDraw()}
+async function tuRequest(t,body){let r=await post('tutor',{...body,async:true});
+ if(r.thread)t.thread=r.thread;if(r.title)t.title=r.title;if(r.job)t.job=r.job;if(TU===t)tuDraw();
+ while(r.pending){if(TU!==t)return null;if(!t.job)throw 'Не удалось начать разбор. Попробуй ещё раз.';
+  await new Promise(resolve=>setTimeout(resolve,1500));if(TU!==t)return null;
+  r=await post('tutor',{op:'poll',job:t.job});if(r.thread)t.thread=r.thread;if(r.title)t.title=r.title;}
+ return r}
+async function tuAsk(mode){const t=TU;if(!t||!t.thread||t.busy)return;
+ const q=mode?null:(($('tuq')||{}).value||'').trim();if(!mode&&!q)return;
+ t.msgs.push({me:true,text:q||(mode=='other'?'Объясни с другой стороны':'Приведи пример')});t.busy=true;tuDraw();
+ try{const r=await tuRequest(t,{op:'ask',thread:t.thread,mode,text:q});if(r){if(r.error)throw r.error;t.msgs.push({text:r.reply})}}
+ catch(err){t.msgs.push({text:typeof err=='string'?err:'Не получилось. Попробуй ещё раз.'})}
+ t.busy=false;if(TU===t)tuDraw()}
+async function tuOk(){const t=TU;if(!t||t.busy)return;t.busy=true;tuDraw();
+ try{if(t.thread)await post('tutor',{op:'ok',thread:t.thread});if(TU!==t)return;TU=null;tuDraw();
+  toast('✅ Отлично! Если тема снова поплывёт — жми «🤔 Объясни проще» ещё раз.')}
+ catch(err){t.busy=false;t.msgs.push({text:typeof err=='string'?err:'Не получилось сохранить. Попробуй ещё раз.'});if(TU===t)tuDraw()}}
+function tuClose(){TU=null;tuDraw()}
+function askFree(){TU={title:'Свой вопрос',free:true,thread:null,busy:false,msgs:[{text:'Напиши, что непонятно: слово, тему или целый вопрос. Например: «как блуждающий нерв успокаивает при стрессе?» Объясню простыми словами на материале твоих лекций.'}]};tuDraw()}
+async function tuFirst(){const q=(($('tuq')||{}).value||'').trim();if(q)await explain('free',null,q)}
+// Вкладку можно открыть ссылкой: …/u/<ключ>/#dojo
+// ---------- «📝 Практика»: задания из лекций с бланками ----------
+const FMT={solo:'🙋 одному',pair:'👥 в паре',either:'🙋/👥 одному или в паре',days:'📅 несколько дней'};
+let TK=null,TKnav=0;
+const TKdrafts=new Map();
+const tkCopy=data=>JSON.parse(JSON.stringify(data||{}));
+const tkError=err=>typeof err=='string'?err:'Не получилось сохранить. Проверь связь и попробуй ещё раз.';
+function tkBind(task){let t=TKdrafts.get(task.id);
+ if(!t){t=Object.assign(task,{_version:0,_saved:0,_revision:0,_queue:Promise.resolve(),_pending:null,_timer:null,_error:'',_actionBusy:false,_actionError:''});TKdrafts.set(t.id,t)}
+ else{const keep=t._version>t._saved||t._pending||t._actionBusy,data=t.data,done=t.done,review=t.review;Object.assign(t,task);if(keep){t.data=data;t.done=done;t.review=review}}
+ return t}
+function tkStatus(t=TK){if(!t||TK!==t)return;const el=$('tkst');if(!el)return;
+ if(t._error)el.innerHTML=`Не сохранилось: ${e(t._error)} Твои изменения остались в бланке. <button class="btn sm" onclick="tkRetry()">Сохранить ещё раз</button>`;
+ else el.textContent=t._version>t._saved?'Сохраняю…':t._version?'Сохранено ✓':'Всё, что пишешь, сохраняется само.';}
+function tkActionState(t=TK){if(!t||TK!==t)return;document.querySelectorAll('[data-task-action]').forEach(b=>b.disabled=!!t._actionBusy);const el=$('tkerr');if(el)el.textContent=t._actionError||''}
+function tkChanged(t){t._version++;t._error='';clearTimeout(t._timer);t._timer=setTimeout(()=>{t._timer=null;tkSave(t)},700);tkStatus(t)}
+function tkSave(t){clearTimeout(t._timer);t._timer=null;const version=t._version;
+ if(version<=t._saved)return Promise.resolve(true);if(t._pending&&t._pending.version===version)return t._pending.promise;
+ const data=tkCopy(t.data),pending={version};t._pending=pending;
+ pending.promise=t._queue.then(async()=>{try{await post('task',{op:'save',id:t.id,data});t._saved=Math.max(t._saved,version);t._error='';return true}
+  catch(err){t._error=tkError(err);return false}}).then(ok=>{if(t._pending===pending)t._pending=null;tkStatus(t);return ok});
+ t._queue=pending.promise;return pending.promise}
+async function tkFlush(t=TK){if(!t)return true;clearTimeout(t._timer);t._timer=null;
+ while(t._saved<t._version){if(!await tkSave(t))return false}return true}
+async function tkRetry(){await tkFlush(TK)}
+async function tkBeforeNavigation(){const nav=++TKnav,t=TK;if(!await tkFlush(t)||nav!==TKnav)return null;TK=null;return nav}
+async function loadPractice(subject,nav){if(nav==null)nav=await tkBeforeNavigation();if(nav==null)return;
+ $('v-practice').innerHTML='<div class="box center loading-line" data-fx-busy="true" data-fx-state="searching">Загружаю…</div>';let T;
+ try{T=(await get('tasks'+(subject?'?subject='+subject:''))).tasks}
+ catch(_){if(nav===TKnav)$('v-practice').innerHTML='<div class="box">Не получилось открыть задания. Попробуй ещё раз.</div>';return}
+ if(nav!==TKnav)return;
+ if(!T.length){$('v-practice').innerHTML='<div class="box center"><p>Заданий пока нет. Бот ищет их в лекциях после разбора — загляни чуть позже.</p></div>';return}
+ const done=T.filter(t=>t.done).length, groups=[];
+ T.forEach(t=>{const k=t.subject+'|'+(t.lecture||'');let g=groups.find(x=>x.k==k);if(!g)groups.push(g={k,subject:t.subject,lecture:t.lecture||'Общие задания по дисциплине',items:[]});g.items.push(t)});
+ let h=`<div class="box"><h2>📝 Практика: сделано ${done} из ${T.length}</h2><div class="bar"><i style="width:${Math.round(100*done/T.length)}%"></i></div>
+  <p class="hint">Задания из лекций, которые нужно сделать самому. 🔴 горит, пока не нажмёшь «Готово». Бланки сохраняются сами: свой вегетативный паспорт или дневник можно открыть когда угодно.</p></div>`, subj='';
+ groups.forEach(g=>{if(g.subject!=subj){subj=g.subject;h+=`<h3 style="margin:18px 0 6px">${e(subj||'')}</h3>`}
+  h+=`<div class="box" style="margin-top:8px;padding:12px 14px"><b>${e(g.lecture)}</b>${g.items.map(t=>`<div class="task" onclick="openTask(${t.id})"><span>${t.done?'✅':'🔴'}</span><div><b>${e(t.title)}</b><br><small class="hint">${FMT[t.format]||''}${!t.done&&t.started?' · начато':''}</small></div></div>`).join('')}</div>`});
+ $('v-practice').innerHTML=h;}
+async function openTask(id){const nav=await tabOnly('practice');if(nav==null)return;$('v-practice').innerHTML='<div class="box center loading-line" data-fx-busy="true" data-fx-state="searching">Загружаю…</div>';
+ const known=TKdrafts.get(id),revision=known&&known._revision;
+ try{const task=await get('task?id='+id);if(nav!==TKnav)return;if(known&&known._revision!==revision){task.done=known.done;task.review=known.review}TK=tkBind(task);drawTask()}
+ catch(_){if(nav===TKnav)$('v-practice').innerHTML='<div class="box">Не получилось открыть задание. Попробуй ещё раз.</div>'}}
+function fieldHtml(f,id,v){
+ if(f.type=='text')return `${f.hint?`<p class="hint" style="margin-top:0">${e(f.hint)}</p>`:''}<textarea data-f="${id}" oninput="tkSet()" rows="4">${e(v||'')}</textarea>`;
+ if(f.type=='table'){const rows=v&&v.length?v:Array.from({length:f.rows||3},()=>[]);
+  return `<div class="tblwrap"><table class="tk"><tr>${f.columns.map(c=>`<th>${e(c)}</th>`).join('')}</tr>${rows.map((r,ri)=>`<tr>${f.columns.map((c,ci)=>`<td><textarea rows="2" data-f="${id}" data-r="${ri}" data-c="${ci}" oninput="tkSet()">${e((r||[])[ci]||'')}</textarea></td>`).join('')}</tr>`).join('')}</table></div>
+   <div class="row"><button class="btn sm" onclick="tkAddRow('${id}')" style="flex:0 1 160px">+ строка</button></div>`}
+ if(f.type=='diary'){const rows=v||[];
+  return `${rows.length?`<div class="tblwrap"><table class="tk"><tr><th>Дата</th>${f.columns.map(c=>`<th>${e(c)}</th>`).join('')}</tr>${rows.map((r,ri)=>`<tr><td><input type="date" data-f="${id}" data-r="${ri}" data-c="d" value="${e(r.date||'')}" oninput="tkSet()"></td>${f.columns.map((c,ci)=>`<td><textarea rows="2" data-f="${id}" data-r="${ri}" data-c="${ci}" oninput="tkSet()">${e((r.cells||[])[ci]||'')}</textarea></td>`).join('')}</tr>`).join('')}</table></div>`:'<p class="hint">Записей пока нет.</p>'}
+   <div class="row"><button class="btn sm" onclick="tkAddRow('${id}')" style="flex:0 1 220px">+ запись за сегодня</button></div>`}
+ if(f.type=='check')return f.items.map((it,i)=>`<label class="chk"><input type="checkbox" data-f="${id}" onchange="tkSet()"${v&&v[i]?' checked':''}><span>${e(it)}</span></label>`).join('');
+ if(f.type=='test')return f.groups.map((g,gi)=>`<h4 style="margin:14px 0 4px">${e(g.name)}</h4>`+g.items.map((it,i)=>`<label class="chk"><input type="checkbox" data-f="${id}" data-g="g${gi}" data-i="${i}" onchange="tkSet()"${v&&v['g'+gi]&&v['g'+gi][i]?' checked':''}><span>${e(it)}</span></label>`).join('')).join('')
+  +`<p class="res" id="res-${id}"></p>${f.note?`<p class="hint">${e(f.note)}</p>`:''}`;
+ if(f.type=='scale')return f.items.map((it,i)=>`<div class="sc"><div>${i+1}. ${e(it)}</div><select data-f="${id}" onchange="tkSet()"><option value="">—</option>${f.options.map(o=>`<option value="${o.score}"${v&&v[i]!=null&&+v[i]===o.score?' selected':''}>${e(o.label)}</option>`).join('')}</select></div>`).join('')
+  +`<p class="res" id="res-${id}"></p>${f.key?`<p class="hint">${e(f.key)}</p>`:''}`;
+ return ''}
+function drawTask(){const t=TK,d=t.data||{};
+ let h=`<div class="box"><div class="row" style="margin:0 0 8px"><button class="btn sm" onclick="loadPractice()" style="flex:0 1 160px">← Все задания</button></div>
+  <div class="meta">${e(t.subject||'')} · ${e(t.lecture||'общее задание')} · ${FMT[t.format]||''}</div>
+  <h2 style="margin:6px 0">${t.done?'✅':'🔴'} ${e(t.title)}</h2>
+  <details${t.done?'':' open'}><summary>Что сделать</summary><p style="white-space:pre-wrap">${e(t.instructions)}</p>${t.source?`<small class="hint">Источник: ${e(t.source)}</small>`:''}</details></div>`;
+ t.blank.forEach((f,i)=>{h+=`<div class="box" style="margin-top:12px"><h3 style="margin-top:0">${e(f.label)}</h3>${fieldHtml(f,'f'+i,d['f'+i])}</div>`});
+ h+=`<div class="box" style="margin-top:12px"><div class="row">${t.done?`<button class="btn" data-task-action onclick="taskDone(0)">↩️ Вернуть в несделанные</button>`:`<button class="btn pri" data-task-action onclick="taskDone(1)">✅ Готово — задание сделано</button>`}<button class="btn" data-task-action onclick="taskReview()">🧑‍🏫 Разобрать с преподавателем</button></div>
+  <div id="tkst" class="hint"></div><div id="tkerr" class="hint" role="alert"></div><div id="tkrev">${tkReviewHtml(t)}</div></div>`;
+ $('v-practice').innerHTML=h;tkResults();tkStatus(t);tkActionState(t)}
+function tkReviewHtml(t){return t.review?`<div class="tmsg"><b>🧑‍🏫 Разбор преподавателя</b>${t._reviewStale?'<p class="hint">Этот разбор относится к предыдущей версии бланка. Для новых изменений запроси разбор ещё раз.</p>':'<br>'}${e(t.review)}</div>`:''}
+function tkCollect(t=TK){if(!t||t!==TK)return tkCopy(t&&t.data);const d={};t.blank.forEach((f,i)=>{const id='f'+i,q=[...document.querySelectorAll(`[data-f="${id}"]`)];
+ if(f.type=='text')d[id]=(q[0]||{}).value||'';
+ else if(f.type=='table'){const rows=[];q.forEach(x=>{(rows[+x.dataset.r]=rows[+x.dataset.r]||[])[+x.dataset.c]=x.value});d[id]=rows}
+ else if(f.type=='diary'){const rows=[];q.forEach(x=>{const r=rows[+x.dataset.r]=rows[+x.dataset.r]||{date:'',cells:[]};if(x.dataset.c=='d')r.date=x.value;else r.cells[+x.dataset.c]=x.value});d[id]=rows}
+ else if(f.type=='check')d[id]=q.map(x=>x.checked);
+ else if(f.type=='test'){const g={};q.forEach(x=>{(g[x.dataset.g]=g[x.dataset.g]||[])[+x.dataset.i]=x.checked});d[id]=g}
+ else if(f.type=='scale')d[id]=q.map(x=>x.value===''?null:+x.value);});
+ return d}
+function tkResults(){TK.blank.forEach((f,i)=>{const id='f'+i,v=(TK.data||{})[id],el=$('res-'+id);if(!el)return;
+ if(f.type=='test')el.textContent='Итог: '+f.groups.map((g,gi)=>`${g.name} — ${(((v||{})['g'+gi])||[]).filter(Boolean).length} из ${g.items.length}`).join(' · ');
+ if(f.type=='scale'){const a=(v||[]).filter(x=>x!=null);el.textContent=`Сумма баллов: ${a.reduce((s,x)=>s+x,0)} (отвечено ${a.length} из ${f.items.length})`}})}
+function tkSet(){const t=TK;if(!t)return;t.data=tkCollect(t);tkResults();if(t.review&&!t._reviewStale){t._reviewStale=true;$('tkrev').innerHTML=tkReviewHtml(t)}tkChanged(t)}
+async function tkAddRow(id){const t=TK;if(!t)return;t.data=tkCollect(t);const f=t.blank[+id.slice(1)],rows=t.data[id]||[];
+ if(f.type=='diary')rows.push({date:new Date().toISOString().slice(0,10),cells:[]});
+ else{if(!rows.length)for(let k=0;k<(f.rows||3);k++)rows.push([]);rows.push([])}
+ t.data[id]=rows;if(t.review)t._reviewStale=true;tkChanged(t);drawTask();await tkFlush(t)}
+async function taskDone(flag){const t=TK;if(!t||t._actionBusy)return;t._actionBusy=true;t._actionError='';tkActionState(t);
+ try{if(!await tkFlush(t))return;const r=await post('task',{op:flag?'done':'undo',id:t.id});t.done=!!flag;t._revision++;
+  if(flag){toast(r.gained?`✅ Засчитано! +${r.gained} 🪙 и +10 к росту дерева 🌱`:'✅ Засчитано','coin');(r.events||[]).forEach((text,i)=>setTimeout(()=>toast(text),600+i*700))}refreshWho()}
+ catch(err){t._actionError=tkError(err)}finally{t._actionBusy=false;if(TK===t)drawTask()}}
+async function taskReview(){const t=TK;if(!t||t._actionBusy)return;t._actionBusy=true;t._actionError='';tkActionState(t);
+ try{if(!await tkFlush(t))return;const version=t._version;if(TK===t)$('tkrev').innerHTML='<p class="hint">🧑‍🏫 Читаю твой бланк и готовлю разбор…</p>';
+  const r=await post('task',{op:'review',id:t.id});if(r.error)throw r.error;t.review=r.review;t._revision++;t._reviewStale=t._version!==version;if(TK===t)$('tkrev').innerHTML=tkReviewHtml(t)}
+ catch(err){t._actionError=tkError(err);if(TK===t)$('tkrev').innerHTML=tkReviewHtml(t)}finally{t._actionBusy=false;tkActionState(t)}}
+async function homeTasks(){try{const T=(await get('tasks')).tasks,n=T.filter(t=>!t.done).length,el=$('hometasks');if(!el||!T.length)return;
+ el.innerHTML=`<div class="box" style="padding:12px 14px;margin-bottom:14px;display:flex;gap:12px;align-items:center;flex-wrap:wrap"><div style="flex:1;min-width:200px"><b>📝 Практика</b><br><small class="hint">${n?`🔴 Не сделано заданий из лекций: ${n} из ${T.length}`:`✅ Все ${T.length} заданий сделаны`}</small></div><button class="btn sm${n?' pri':''}" onclick="tab('practice')" style="flex:0 1 160px">Открыть</button></div>`}catch(_){}}
+function appStart(){
+const T0=window.FukushuConnection?.route() ?? location.hash.slice(1);
+if((!T0||T0==='study')&&reviewRestore()){loadHome()}
+else if(['study','glossary','stats','errors','dojo','practice'].includes(T0)){loadHome();tab(T0)}
+else if(/^task-[0-9]+$/.test(T0)){loadHome();openTask(+T0.slice(5))}else if(/^learn-[0-9]+$/.test(T0)){loadHome();openLesson(+T0.slice(6))}else if(/^listen-[0-9]+$/.test(T0)){loadHome();openLesson(+T0.slice(7))}else loadHome();
+audioRestore(/^listen-[0-9]+$/.test(T0)?+T0.slice(7):0);
+}
+if(window.FukushuConnection)window.FukushuConnection.start(appStart);else appStart();
+</script><script defer src="./static/telegram-web-app.js?v=20261024"></script><script defer src="./static/mobile.js?v=20261024"></script><script type="module" src="./static/effects.js?v=20261024"></script></body></html>
