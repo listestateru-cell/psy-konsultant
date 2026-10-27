@@ -257,3 +257,54 @@
 @media (prefers-reduced-motion: reduce) {
   #mobile-nav button, .mobile-section-toggle, .mobile-audio-toggle { transition: none; }
 }
+
+/* A compact home launcher keeps every discipline in the first two rows. */
+@media (max-width: 767px), (max-width: 1023px) and (pointer: coarse) {
+  main:has(#v-home:not([hidden])) > header { margin-bottom: 14px; padding-bottom: 8px; }
+  .home-hero.home-hero-compact { padding: 16px; margin-bottom: 14px; border-radius: 18px; }
+  .home-hero-compact .eyebrow { max-width: calc(100% - 46px); font-size: 10px; line-height: 1.5; }
+  .home-hero-compact h2 { max-width: calc(100% - 42px); margin: 4px 0 0; font-size: 22px; line-height: 1.25; }
+  .home-hero-compact p { display: none; }
+  .home-hero-compact .home-orb { top: 17px; right: 14px; width: 40px; height: 40px; }
+  .home-hero-compact .row { margin-top: 12px; }
+  .home-hero-compact .row .btn { min-height: 44px; padding: 10px 12px; font-size: 14px; }
+  .home-subjects { margin-bottom: 16px; }
+  .home-subjects .home-section-title { margin: 18px 2px 12px; gap: 10px; }
+  .home-subjects .home-section-title h2 { font-size: 18px; }
+  .home-subjects .home-section-title small { font-size: 11px; }
+  .subject-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 10px; }
+  .subject-tile { min-height: 112px; gap: 7px; padding: 4px 1px 6px; border-radius: 14px; }
+  .subject-icon { width: 60px; height: 60px; border-radius: 19px; }
+  .subject-icon svg { width: 33px; height: 33px; }
+  .subject-label { font-size: 12px; line-height: 1.3; font-weight: 580; letter-spacing: -.015em; }
+  .subject-count { margin-top: -4px; font-size: 10px; line-height: 1.3; }
+  .subject-dialog {
+    width: calc(100% - 32px); max-width: 480px;
+    max-height: calc(var(--mobile-visible-height, 100dvh) - 32px - var(--mobile-safe-top, 0px) - var(--mobile-safe-bottom, 0px));
+    padding: 18px; border-radius: 24px;
+  }
+  .subject-dialog-head { gap: 12px; margin-bottom: 12px; padding-bottom: 8px; }
+  .subject-dialog-head h2 { font-size: 19px; margin-top: 8px; }
+  .subject-hub { grid-template-columns: minmax(0, 1fr) 40px minmax(0, 1fr); grid-template-rows: minmax(80px, auto) minmax(106px, auto) minmax(80px, auto); gap: 10px 0; }
+  .subject-hub-center { width: 172px; padding: 6px; gap: 7px; font-size: 12px; }
+  .subject-hub-center .subject-icon { width: 58px; height: 58px; border-radius: 18px; }
+  .subject-hub-center b, .subject-hub-center strong, .subject-hub-center .subject-label { font-size: 12px; }
+  .subject-action { min-height: 80px; gap: 7px; padding: 11px 8px; border-radius: 16px; font-size: 13px; }
+  .subject-action svg { width: 23px; height: 23px; flex-basis: 23px; }
+  .subject-action small { font-size: 11px; }
+  .subject-dialog-note { margin-top: 16px; font-size: 12px; }
+}
+@media (max-width: 359px) {
+  .subject-grid { column-gap: 7px; }
+  .subject-icon { width: 56px; height: 56px; border-radius: 18px; }
+  .subject-label { font-size: 11px; }
+  .subject-dialog { width: calc(100% - 24px); padding: 14px; }
+  .subject-dialog-head h2 { font-size: 18px; }
+  .subject-hub { grid-template-columns: minmax(0, 1fr) 28px minmax(0, 1fr); }
+}
+@media (max-width: 1023px) and (max-height: 480px) and (pointer: coarse), (max-width: 767px) and (max-height: 480px) {
+  .home-hero.home-hero-compact { padding: 12px 16px; }
+  .home-hero-compact h2 { font-size: 20px; }
+  .subject-dialog { max-height: calc(100dvh - 24px); margin: 12px auto; }
+  .subject-dialog-head { margin-bottom: 8px; }
+}

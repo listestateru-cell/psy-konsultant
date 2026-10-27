@@ -9,6 +9,7 @@
   const endpointKey = 'fukushu.endpoint.v1';
   const gatewayStatuses = new Set([502, 503, 504, 530]);
   const validKey = value => /^[A-Za-z0-9_-]{8,128}$/.test(value || '');
+  const isInstalled = () => navigator.standalone === true || window.matchMedia?.('(display-mode: standalone)')?.matches === true;
   const read = name => { try { return localStorage.getItem(name); } catch (_) { return null; } };
   const write = (name, value) => { try { localStorage.setItem(name, value); } catch (_) {} };
   const fragment = location.hash.slice(1).split('~');
@@ -60,7 +61,8 @@
     cover = document.createElement('section');
     cover.id = 'connection-cover';
     cover.setAttribute('aria-label', 'Подключение к Фукусю');
-    cover.innerHTML = '<div class="connection-card box"><div class="brand-mark" aria-hidden="true">復</div><h1>Фукусю</h1><p id="connection-status" role="status" aria-live="polite">Соединяюсь с Mac…</p><p class="hint" id="connection-detail">Лекции и твой прогресс хранятся на компьютере.</p><button class="btn pri" id="connection-retry" hidden>Подключиться ещё раз</button><form id="connection-login" hidden><label for="connection-link">Личная ссылка из бота</label><input id="connection-link" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Вставь ссылку «Веб-версия»"><button class="btn pri" type="submit">Открыть моё приложение</button></form><button class="connection-install-link" data-install-open>Добавить на экран телефона</button></div>';
+    cover.innerHTML = '<div class="connection-card box"><div class="brand-mark" aria-hidden="true">復</div><h1>Фукусю</h1><p id="connection-status" role="status" aria-live="polite">Соединяюсь с Mac…</p><p class="hint" id="connection-detail">Лекции и твой прогресс хранятся на компьютере.</p><button class="btn pri" id="connection-retry" hidden>Подключиться ещё раз</button><form id="connection-login" hidden><label for="connection-link">Личная ссылка из бота</label><input id="connection-link" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Вставь ссылку «Веб-версия»"><button class="btn pri" type="submit">Открыть моё приложение</button></form>' +
+      (isInstalled() ? '' : '<button class="connection-install-link" data-install-open>Добавить на экран телефона</button>') + '</div>';
     document.body.append(cover);
     cover.querySelector('#connection-retry').onclick = () => connectAndBoot(true);
     cover.querySelector('form').onsubmit = event => {
@@ -232,9 +234,9 @@
     document.body.style.overflow = 'hidden';
     installDialog = document.createElement('dialog'); installDialog.id = 'install-dialog';
     installDialog.setAttribute('aria-labelledby', 'install-title');
-    const isInstalled = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+    const installed = isInstalled();
     installDialog.innerHTML = '<div class="install-dialog-head"><h2 id="install-title">Фукусю на экране телефона</h2><button class="btn sm" id="install-close" aria-label="Закрыть инструкцию">✕</button></div>' +
-      (isInstalled ? '<p>Ты уже открыл Фукусю как приложение.</p>' : '<p>Значок будет открывать Фукусю по постоянному адресу, без адресной строки браузера.</p><button class="btn pri" id="install-native" hidden>Установить Фукусю</button><p><b>iPhone и iPad</b><br>Открой эту ссылку в Safari. Нажми «Поделиться» → «На экран “Домой”». Если есть переключатель «Открыть как веб-приложение», включи его.</p><p><b>Android</b><br>Открой эту ссылку в Chrome. В меню выбери «Установить приложение» или «Добавить на главный экран».</p>') +
+      (installed ? '<p>Ты уже открыл Фукусю как приложение.</p>' : '<p>Значок будет открывать Фукусю по постоянному адресу, без адресной строки браузера.</p><button class="btn pri" id="install-native" hidden>Установить Фукусю</button><p><b>iPhone и iPad</b><br>Открой эту ссылку в Safari. Нажми «Поделиться» → «На экран “Домой”». Если есть переключатель «Открыть как веб-приложение», включи его.</p><p><b>Android</b><br>Открой эту ссылку в Chrome. В меню выбери «Установить приложение» или «Добавить на главный экран».</p>') +
       '<p class="hint">Для лекций и проверки ответов Mac должен быть включён. При смене его адреса приложение найдёт подключение заново.</p>';
     document.body.append(installDialog);
     installDialog.querySelector('#install-close').onclick = closeInstall;
@@ -254,6 +256,7 @@
   document.addEventListener('visibilitychange', () => { if (!document.hidden && boot && validKey(key)) { if (!started) connectAndBoot(); else if (Date.now() - lastDiscovery > 120000) reconnect().catch(() => {}); } });
   window.FukushuConnection = Object.freeze({
     hosted: true, key,
+    get installed() { return isInstalled(); },
     get origin() { return origin; },
     apiBase: () => ({toString: () => origin + apiPrefix}),
     route: launchRoute, setRoute, reconnect, openInstall,
