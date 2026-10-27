@@ -25,19 +25,21 @@
     let status = 'loading', epoch = 0, urgentDelivery = false;
     const put = (key, value) => { try { value == null ? storage.removeItem(key) : storage.setItem(key, JSON.stringify(value)); } catch (_) {} };
     const read = key => { try { return JSON.parse(storage.getItem(key) || 'null'); } catch (_) { return null; } };
-    const state = value => { status = value; options.status?.(value, !!read(backupKey)); };
+    const hasBackup = () => { const saved = read(backupKey); return saved?.generation === generation && !!saved.session; };
+    const state = value => { status = value; options.status?.(value, hasBackup()); };
+    const currentState = () => state(deferred ? 'conflict' : pending || flight ? 'saving' : 'saved');
     const persist = () => put(outboxKey, pending && { generation, revision, session: pending.session });
     function rememberConflict(session) { if (session) put(backupKey, { generation, session }); }
     function apply(snapshot) {
       if (snapshot.generation !== generation) { options.reset?.(snapshot.generation); return false; }
       if (!Number.isSafeInteger(snapshot.revision) || snapshot.revision < revision) return false;
-      if (options.busy?.()) { deferred = snapshot; return false; }
+      if (options.busy?.()) { deferred = snapshot; state('conflict'); return false; }
       revision = snapshot.revision;
       const session = clean(snapshot.session);
       baseline = fingerprint(session); pending = null; deferred = null; persist();
       applying = true;
       try { options.apply(session); } finally { applying = false; }
-      state(read(backupKey) ? 'conflict' : 'saved');
+      currentState();
       return true;
     }
     function changed(session) {
@@ -46,7 +48,7 @@
       if (ready && signature === baseline && !flight) {
         pending = null; persist();
         if (timer != null) options.cancel?.(timer);
-        timer = null; state(read(backupKey) ? 'conflict' : 'saved'); return;
+        timer = null; currentState(); return;
       }
       if (pending && pending.signature === signature) return;
       pending = { session: value, signature }; persist(); state('saving');
@@ -92,23 +94,23 @@
             if (fingerprint(clean(reply.session)) === sent.signature) {
               revision = reply.revision; baseline = sent.signature;
               if (pending === sent || pending?.signature === baseline) pending = null;
-              persist(); state(pending ? 'saving' : read(backupKey) ? 'conflict' : 'saved'); return true;
+              persist(); currentState(); return true;
             }
             rememberConflict(pending?.session || sent.session);
             pending = null; persist();
             if (!apply(reply)) deferred = reply;
-            state('conflict'); return false;
+            currentState(); return false;
           }
           if (!Number.isSafeInteger(reply.revision) || reply.revision <= base) throw Error('checkpoint not confirmed');
           revision = reply.revision; baseline = fingerprint(clean(reply.session));
           if (pending === sent || pending?.signature === baseline) pending = null;
-          persist(); state(pending ? 'saving' : read(backupKey) ? 'conflict' : 'saved'); return true;
+          persist(); currentState(); return true;
         } catch (_) { if (token === epoch) { persist(); state('offline'); } return false; }
         finally {
           if (token === epoch) {
             flight = null;
             if (pending && pending !== sent && status !== 'offline' && status !== 'conflict') flush(urgentDelivery);
-            else if (!pending) { urgentDelivery = false; state(read(backupKey) ? 'conflict' : 'saved'); }
+            else if (!pending) { urgentDelivery = false; currentState(); }
           }
         }
       })();
@@ -126,7 +128,7 @@
           if (token !== epoch || pending || flight) return;
           if (snapshot.generation !== generation) return options.reset?.(snapshot.generation);
           if (snapshot.revision > revision) apply(snapshot);
-          else if (status === 'offline') state('saved');
+          else if (status === 'offline') currentState();
         } catch (_) { if (token === epoch) state('offline'); }
         finally { polling = null; }
       })();
@@ -149,9 +151,9 @@
         await flush();
         if (status === 'offline' || status === 'conflict' && pending) return false;
       }
-      return !pending && !flight && ready;
+      return !pending && !flight && !deferred && ready;
     }
-    return { start, changed, flush, settled, poll, reset, recover, get status() { return status; }, get revision() { return revision; }, get isCurrent() { return ready && !pending && !flight && !deferred; } };
+    return { start, changed, flush, settled, poll, reset, recover, get status() { return status; }, get revision() { return revision; }, get hasBackup() { return hasBackup(); }, get isCurrent() { return ready && !pending && !flight && !deferred; } };
   }
   root.FukushuStudySync = { create, clean };
 })(typeof window !== 'undefined' ? window : globalThis);
