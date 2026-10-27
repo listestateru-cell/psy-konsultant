@@ -13,6 +13,8 @@ html{scroll-padding-bottom:180px}body{background:var(--bg);letter-spacing:-.012e
 
 .ans [data-fx-busy="true"]{color:var(--mute)}
 /* A voice draft stays in the same answer field; submitting remains explicit. */
+.audio-progress-summary{margin:6px 4px 2px;font-size:13px;line-height:1.5;color:var(--mute)}
+.audio-progress-summary[hidden]{display:none}
 .answer-label{display:block;font-weight:600;margin:16px 0 8px}
 .card-voice{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px}
 .card-voice .btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:48px;flex:0 1 auto}
