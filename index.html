@@ -138,26 +138,32 @@ const pct=v=>v==null?'—':Math.round(v)+'%';
 const col=v=>v==null?'var(--bar)':v>=85?'var(--ok)':v>=65?'var(--mid)':'var(--bad)';
 const LV={0:'📖 термины',1:'сю · знать',2:'ха · понимать',3:'ри · применять'};
 const get=p=>fetch(API+p).then(r=>{if(!r.ok)throw r.status;return r.json()});
-const post=(p,b)=>fetch(API+p,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}).then(async r=>{const data=await r.json();if(!r.ok)throw data.error||'Не получилось выполнить запрос. Попробуй ещё раз.';return data});
+const post=(p,b)=>fetch(API+p,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}).then(async r=>{const data=await r.json();if(data.reset)studyApplyGeneration(data.generation);if(!r.ok)throw data.error||'Не получилось выполнить запрос. Попробуй ещё раз.';return data});
+let STUDY_GENERATION=null,WAITING_LECTURE=null;
+function studyGeneration(){return STUDY_GENERATION??0}
+function studyApplyGeneration(value){if(!Number.isSafeInteger(value)||value<0)return false;const cached=reviewRead();let previous=STUDY_GENERATION;const checkpointGeneration=cached?.generation??0;if(Number.isSafeInteger(checkpointGeneration)&&checkpointGeneration>=0)previous=Math.max(previous??0,checkpointGeneration);
+ try{const stored=Number(localStorage.getItem('fukushu.study.generation.'+KEY)??cached?.generation??0);if(Number.isSafeInteger(stored)&&stored>=0)previous=Math.max(previous??0,stored)}catch(_){}
+ previous??=0;if(value<previous){STUDY_GENERATION=previous;return false}try{localStorage.setItem('fukushu.study.generation.'+KEY,String(value))}catch(_){}STUDY_GENERATION=value;
+ if(previous!==value||cached&&(cached.generation||0)!==value){try{localStorage.removeItem(reviewKey())}catch(_){}if(typeof cardVoiceLeave==='function')cardVoiceLeave();S=null;WAITING_LECTURE=null;if(typeof audioForget==='function')audioForget();if(typeof AU!=='undefined'&&AU){++AUDIO_REQUEST;audioDetach();AU=null;audioDraw()}}return true}
 const slideUrl=c=>`${API}slide/${c.lecture_id}/${c.slide}`;
 let SUBJ=[]; // дисциплины
 const subjOptions=sel=>`<option value="">Все дисциплины</option>`+SUBJ.map(s=>`<option value="${s.id}"${sel==s.id?' selected':''}>${e(s.name)}</option>`).join('');
 
 document.querySelectorAll('#desktop-nav button').forEach(b=>b.onclick=()=>tab(b.dataset.t));
-async function tab(t){const nav=await tkBeforeNavigation();if(nav==null)return;if(typeof learnLeave==='function')learnLeave();document.querySelectorAll('#desktop-nav button').forEach(b=>b.classList.toggle('on',b.dataset.t==t));
+async function tab(t){const nav=await tkBeforeNavigation();if(nav==null)return;if(typeof cardVoiceLeave==='function')cardVoiceLeave();if(typeof WAITING_LECTURE!=='undefined')WAITING_LECTURE=null;if(typeof learnLeave==='function')learnLeave();document.querySelectorAll('#desktop-nav button').forEach(b=>b.classList.toggle('on',b.dataset.t==t));
  ['home','study','glossary','stats','errors','dojo','practice'].forEach(x=>$('v-'+x).hidden=x!=t);
  if(t=='dojo')loadDojo(); if(t=='practice')loadPractice(undefined,nav); if(t=='home')loadHome(); if(t=='stats')loadStats(); if(t=='errors')loadErrors(); if(t=='glossary')loadGlossary();
  if(t=='study'&&!S)studyMenu();if(typeof window!=='undefined'){window.FukushuMobile?.sync?.(t);window.FukushuConnection?.setRoute?.(t)}; window.scrollTo(0,0);}
 window.FukushuNavigate=t=>tab(t);
 
 // ---------- главная: дисциплины ----------
-async function loadHome(){
- const o=await get('overview'); SUBJ=o.subjects;
+async function loadHome(initial=null){
+ const o=initial||await get('overview');if(!studyApplyGeneration(o.generation??0))return;SUBJ=o.subjects;
  const h=o.subjects.map(s=>{const st=s.cards?100*s.started/s.cards:0, ma=s.cards?100*s.mature/s.cards:0;
   return `<div class="box subj"><h3>${e(s.name)}</h3>
    <div class="nums">${s.lectures} лекц. · ${s.cards} карточек · ${s.terms} терминов${s.acc!=null?' · верных '+pct(s.acc):''}</div>
    ${s.cards?`<div class="stack" title="выучено прочно / начато / не начато"><i style="width:${ma}%;background:var(--ok)"></i><i style="width:${st-ma}%;background:var(--mid)"></i></div>
-   <div class="hint" style="margin-top:6px">${s.mature} выучено прочно, ${s.started-s.mature} в процессе, ${s.cards-s.started} не начато</div>
+   <div class="hint" style="margin-top:6px">${s.mature} выучено прочно, ${s.started-s.mature} в процессе, ${s.cards-s.started} не начато${o.generation?`<br>По изученному материалу открыто ${s.unlocked_cards||0} карточек.`:''}</div>
    <div style="margin-top:8px">${s.due?`<span class="pill hot">к повтору ${s.due}</span>`:''}${s.new_avail?`<span class="pill">новых ${s.new_avail}</span>`:''}</div>
    <div class="row"><button class="btn sm pri" onclick="startSession('due',${s.id},0)">Учить</button><button class="btn sm" onclick="startSession('due',${s.id},1)">Термины</button><button class="btn sm" onclick="pickLecture(${s.id})">🎧 Лекция</button><button class="btn sm" onclick="openStats(${s.id})">Статистика</button></div>`
    :'<div class="hint">Материалов пока нет. Можно прислать конспект или презентацию ниже.</div>'}</div>`}).join('');
@@ -180,7 +186,7 @@ async function upload(file){
 
 // ---------- повторение ----------
 let S=null;
-function studyMenu(){learnLeave();$('v-study').innerHTML=`<div class="box"><h2>Что повторяем?</h2>
+function studyMenu(){if(typeof WAITING_LECTURE!=='undefined')WAITING_LECTURE=null;if(typeof cardVoiceLeave==='function')cardVoiceLeave();learnLeave();$('v-study').innerHTML=`<div class="box"><h2>Что повторяем?</h2>
  <div class="row"><button class="btn pri" onclick="pickLecture(0)">Открыть мои лекции</button></div>
  ${reviewRead()?'<div class="row"><button class="btn pri" onclick="reviewRestore()">Продолжить вопросы</button></div>':''}
  ${SUBJ.filter(s=>s.cards).map(s=>`<div class="row" style="align-items:center"><div style="flex:2 1 220px"><b>${e(s.name)}</b><br><small class="hint">к повтору ${s.due}, новых ${s.new_avail}</small></div>
@@ -195,36 +201,46 @@ async function pickLecture(subject){
  const groups=[...new Set(L.map(l=>l.subject))];
  $('v-study').innerHTML=`<div class="lecture-intro"><span class="eyebrow">Библиотека</span><h2>Мои лекции</h2><p class="hint">Слушай лектора, разбирай тему по разделам и проверяй себя.</p><label class="lecture-search"><span class="hint">Найти лекцию или дисциплину</span><input type="search" id="lecture-search" placeholder="Например, память или психофизиология" oninput="filterLectures(this.value)"></label></div>
   ${groups.map(g=>`<h3 class="lecture-group-title" data-lecture-group="${e(g)}">${e(g)}</h3>`+L.filter(l=>l.subject==g).map(l=>`<article class="lecture-card" data-lecture-group="${e(g)}" data-lecture-search="${e((l.title+' '+g).toLocaleLowerCase('ru'))}">
-   <div class="lecture-details"><h3>${e(l.title)}</h3><small>${l.new?`не начато ${l.new}`:'всё начато, можно закрепить'}${l.due?` · к повтору ${l.due}`:''} · ${l.cards} карточек</small></div><div class="lecture-actions">
-   ${l.has_audio!==false?`<button class="btn sm pri lecture-primary" onclick="audioStudy(${l.id},${l.subject_id})">Слушать и учиться</button>`:''}<button class="btn sm ${l.has_audio===false?'pri lecture-primary':''}" onclick="openLesson(${l.id})">Разделы · Объясню сам</button><button class="btn sm" onclick="explain('lecture',${l.id})">${l.has_explanation?'Читать разбор':'О чём лекция'}</button>${l.cards?`<button class="btn sm" onclick="audioRepeat(${l.id},${l.subject_id})">Повторить без аудио</button><button class="btn sm" onclick="startSession('due',${l.subject_id},1,${l.id})">Термины</button>`:''}</div></article>`).join('')).join('')||'<p class="empty">Разобранных лекций пока нет.</p>'}
+   <div class="lecture-details"><h3>${e(l.title)}</h3><small>${l.generation?`открыто ${l.unlocked_cards||0} из ${l.cards} карточек${l.heard_seconds?` · прослушано ${Math.floor(l.heard_seconds/60)} мин`:''}`:`${l.new?`не начато ${l.new}`:'всё начато, можно закрепить'} · ${l.cards} карточек`}${l.due?` · к повтору ${l.due}`:''}</small>${l.generation&&l.has_audio!==false&&l.timeline_status!=='ready'?'<p class="hint">Готовлю привязку вопросов к записи. Пока можно слушать и читать разбор.</p>':''}</div><div class="lecture-actions">
+   ${l.has_audio!==false?`<button class="btn sm pri lecture-primary" onclick="audioStudy(${l.id},${l.subject_id})">Слушать и учиться</button>`:''}<button class="btn sm ${l.has_audio===false?'pri lecture-primary':''}" onclick="openLesson(${l.id})">Разделы · Объясню сам</button><button class="btn sm" onclick="explain('lecture',${l.id})">${l.has_explanation?'Читать разбор':'О чём лекция'}</button>${l.generation&&l.has_audio===false&&(l.unlocked_cards||0)<l.cards?`<button class="btn sm" onclick="materialRead(${l.id},${l.subject_id},this)">Материал прочитан · открыть карточки</button>`:''}${l.cards?`<button class="btn sm" onclick="audioRepeat(${l.id},${l.subject_id})">Повторить без аудио</button><button class="btn sm" onclick="startSession('due',${l.subject_id},1,${l.id})">Термины</button>`:''}</div></article>`).join('')).join('')||'<p class="empty">Разобранных лекций пока нет.</p>'}
   <p id="lecture-search-empty" class="empty" hidden>Ничего не нашлось. Попробуй другое слово.</p><div class="row"><button class="btn sm" onclick="studyMenu()" style="flex:0 1 200px">← К повторению</button></div>`}
 function filterLectures(value){const query=value.trim().toLocaleLowerCase('ru'),visible=new Set();document.querySelectorAll('.lecture-card').forEach(card=>{card.hidden=!card.dataset.lectureSearch.includes(query);if(!card.hidden)visible.add(card.dataset.lectureGroup)});document.querySelectorAll('.lecture-group-title').forEach(title=>title.hidden=!visible.has(title.dataset.lectureGroup));$('lecture-search-empty').hidden=visible.size>0}
-async function startSession(mode,subject,terms,lecture){
+async function materialRead(id,subject,button){button.disabled=true;try{await post('audio',{op:'read_material',lecture_id:id,generation:studyGeneration()});await startSession('lecture',subject,0,id)}catch(err){button.disabled=false;button.textContent=String(err)}}
+async function startSession(mode,subject,terms,lecture,seen=[]){
  if(!await reviewBeforeSession())return;
  if(await tabOnly('study')==null)return; learnLeave();$('v-study').innerHTML='<div class="box center loading-line" data-fx-busy="true" data-fx-state="searching">Загружаю…</div>';
  const r=await get(`session?mode=${mode}&subject=${subject||''}&terms=${terms||0}&lecture=${lecture||''}`);
- if(!r.cards.length){S=null;$('v-study').innerHTML=`<div class="box center"><div class="big">👌</div><p>${e(r.message)}</p><div class="row" style="justify-content:center"><button class="btn sm" onclick="S=null;studyMenu()" style="flex:0 1 220px">Выбрать другое</button></div></div>`;return}
- S={cards:r.cards,pos:0,ok:0,done:0,mode,subject,terms,lecture,requeue:{}};show();}
-async function tabOnly(t){const nav=await tkBeforeNavigation();if(nav==null)return null;document.querySelectorAll('#desktop-nav button').forEach(b=>b.classList.toggle('on',b.dataset.t==t));['home','study','glossary','stats','errors','dojo','practice'].forEach(x=>$('v-'+x).hidden=x!=t);if(typeof window!=='undefined'){window.FukushuMobile?.sync?.(t);window.FukushuConnection?.setRoute?.(t)};window.scrollTo(0,0);return nav}
+ if(typeof studyGeneration==='function'&&(r.generation??0)<studyGeneration())return;
+ if(seen.length)r.cards=r.cards.filter(c=>!seen.includes(c.id));
+ if(typeof studyApplyGeneration==='function')studyApplyGeneration(r.generation??0);
+ if(typeof WAITING_LECTURE!=='undefined')WAITING_LECTURE=null;
+ if(!r.cards.length){S=null;studyWaiting(mode,subject,terms,lecture,seen,r.availability,r.message);return}
+ S={cards:r.cards,pos:0,ok:0,done:0,mode,subject,terms,lecture,seen,generation:r.generation||0,availability:r.availability,requeue:{}};show();}
+function studyWaiting(mode,subject,terms,lecture,seen=[],availability=null,message=''){if(lecture&&mode==='lecture'&&typeof WAITING_LECTURE!=='undefined')WAITING_LECTURE={lecture,subject,terms,mode,seen,unlocked:availability?.unlocked_cards||0};
+ $('v-study').innerHTML=`<div class="box center" id="study-waiting"><h2>${seen.length?'Продолжай слушать':lecture?'Сначала послушаем':'На сегодня всё'}</h2><p>${e(message||(seen.length?'Доступные вопросы пройдены. Следующие появятся по ходу записи.':'Пока нет вопросов по прослушанному материалу.'))}</p>${lecture?`<p class="hint">Вопросы появятся по уже прослушанным фрагментам. Перемотка вперёд их не открывает.</p><div class="row"><button class="btn pri" onclick="audioOpen(${lecture})">Слушать лекцию</button><button class="btn" onclick="studyCheckNew('${mode}',${subject||0},${terms||0},${lecture})">Проверить новые вопросы</button></div>`:''}<div class="row" style="justify-content:center"><button class="btn sm" onclick="S=null;studyMenu()" style="flex:0 1 220px">Выбрать другое</button></div></div>`}
+function studyCheckNew(mode,subject,terms,lecture){const seen=typeof WAITING_LECTURE!=='undefined'?WAITING_LECTURE?.seen||[]:[];return startSession(mode,subject,terms,lecture,seen)}
+async function tabOnly(t){const nav=await tkBeforeNavigation();if(nav==null)return null;if(typeof cardVoiceLeave==='function')cardVoiceLeave();document.querySelectorAll('#desktop-nav button').forEach(b=>b.classList.toggle('on',b.dataset.t==t));['home','study','glossary','stats','errors','dojo','practice'].forEach(x=>$('v-'+x).hidden=x!=t);if(typeof window!=='undefined'){window.FukushuMobile?.sync?.(t);window.FukushuConnection?.setRoute?.(t)};window.scrollTo(0,0);return nav}
 function show(restoring=false){
  if(S.pos>=S.cards.length)return finish();
  const c=S.card=S.cards[S.pos]; if(!restoring){S.pending=null;S.draft=''}
  const lvl=c.kind=='term'?'📖 термин':(LV[c.level]||'');
  let h=`<div class="progress"><i style="width:${100*S.pos/S.cards.length}%"></i></div><div class="box">
   <div class="meta"><b>${S.pos+1}/${S.cards.length}</b> · ${e(c.topic)} · ${lvl}${c.is_new?' · 🆕':''}<br>${e(c.subject||'')}${c.lecture?' · '+e(c.lecture):''}</div>
-  ${S.mode==='lecture'?'<p class="audio-study-note">Все вопросы этой лекции. Отвечай в своём темпе; запись можно поставить на паузу или перемотать.</p>':''}${c.lecture_id?`<div class="row audio-lesson-action"><button class="btn sm" onclick="audioOpen(${c.lecture_id})">Слушать лектора</button><button class="btn sm" onclick="openLesson(${c.lecture_id})">Смысловые разделы</button></div>`:''}
+  ${S.mode==='lecture'?`<p class="audio-study-note">${S.generation?'Вопросы по уже прослушанным фрагментам. Новые будут добавляться по ходу лекции.':'Все вопросы этой лекции. Отвечай в своём темпе; запись можно поставить на паузу или перемотать.'}</p><div id="study-new-cards" hidden></div>`:''}${c.lecture_id?`<div class="row audio-lesson-action"><button class="btn sm" onclick="audioOpen(${c.lecture_id})">Слушать лектора</button><button class="btn sm" onclick="openLesson(${c.lecture_id})">Смысловые разделы</button></div>`:''}
   ${c.slide&&c.slide_side=='question'?`<img class="slide" crossorigin="anonymous" src="${slideUrl(c)}" alt="Слайд ${c.slide}">`:''}
   <p class="q">${e(c.question)}</p><div id="act">`;
  if(c.kind=='mcq')h+='<div class="opts">'+c.options.map((o,i)=>`<button class="btn" data-i="${i}">${i+1}. ${e(o)}</button>`).join('')+'</div>';
  else if(c.kind=='tf')h+='<div class="row"><button class="btn" data-i="1">✅ Верно</button><button class="btn" data-i="0">❌ Неверно</button></div>';
- else h+=`<textarea id="txt" oninput="reviewDraft()" aria-label="Мой ответ" placeholder="Ответь своими словами. Можно и мысленно: тогда сразу «Показать ответ».">${e(S.pending?.answer||S.draft||'')}</textarea>
+ else h+=`<label class="answer-label" for="txt">Мой ответ</label><textarea id="txt" maxlength="20000" oninput="reviewDraft()" aria-describedby="card-voice-status" placeholder="Ответь своими словами или надиктуй голосом.">${e(S.pending?.answer||S.draft||'')}</textarea>
+  <div class="card-voice"><button class="btn" id="card-mic" type="button" onclick="cardVoiceRecord()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="8" y="2" width="8" height="13" rx="4"/><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M8 22h8"/></svg><span>Ответить голосом</span></button><button class="btn sm" id="card-voice-cancel" type="button" onclick="cardVoiceCancel()" hidden>Отменить запись</button><button class="btn sm" id="card-voice-retry" type="button" onclick="cardVoiceRetry()" hidden>Повторить распознавание</button></div>
+  <p class="hint" id="card-voice-status" role="status" aria-live="polite">Лекция встанет на паузу. После диктовки проверь текст и нажми «Проверить мой ответ».</p>
   <div class="row"><button class="btn pri" id="chk">Проверить мой ответ</button><button class="btn" id="rev">👀 Показать ответ</button></div>
   <div class="hint">Проверка по смыслу занимает секунд десять-двадцать.</div>`;
  h+='</div><div id="out"></div></div>';
  $('v-study').innerHTML=h;
  document.querySelectorAll('#act [data-i]').forEach(b=>b.onclick=()=>pick(+b.dataset.i,b));
  if($('rev')){$('rev').onclick=reveal;$('chk').onclick=check}
- reviewPersist();if(S.pending){lock();reviewRender(S)}}
+ reviewPersist();if(S.pending){lock();reviewRender(S)}else if(typeof cardVoiceDraw==='function'){cardVoiceDraw();cardVoiceRestore()}}
 function answerHtml(c){let t=`<p><b>Ответ:</b> ${e(c.answer)}</p>`;
  if(c.explanation)t+=`<p>💡 ${e(c.explanation)}</p>`; if(c.mnemonic)t+=`<p>🧠 Запоминалка: ${e(c.mnemonic)}</p>`;
  if(c.slide&&c.slide_side=='answer')t+=`<img class="slide" crossorigin="anonymous" src="${slideUrl(c)}" alt="Слайд ${c.slide}" loading="lazy">`; return t}
@@ -253,11 +269,11 @@ function reviewAccept(s,p,res){if(!res?.saved)throw new Error('save not confirme
  reviewPersist(s);reviewRender(s);return true;}
 async function reviewSave(s,p,rating,correct,confident){if(p.state==='saved')return true;if(p._flight)return p._flight;
  Object.assign(p,{rating,correct,confident:confident??null,state:'saving'});reviewPersist(s);reviewRender(s);
- p._flight=(async()=>{try{return reviewAccept(s,p,await post('review',{attempt_id:p.attempt_id,card_id:s.card.id,rating,correct,confident:p.confident,answer:p.answer,feedback:p.feedback||null,graded:!!p.graded}))}
+ p._flight=(async()=>{try{return reviewAccept(s,p,await post('review',{generation:s.generation||0,attempt_id:p.attempt_id,card_id:s.card.id,rating,correct,confident:p.confident,answer:p.answer,feedback:p.feedback||null,graded:!!p.graded}))}
   catch(_){p.state='error';reviewPersist(s);reviewRender(s);return false}finally{p._flight=null}})();return p._flight;}
 async function reviewGrade(s,p){if(p.state==='saved')return true;if(p._flight)return p._flight;
  p.state='grading';reviewPersist(s);reviewRender(s);
- p._flight=(async()=>{try{const r=await post('grade',{attempt_id:p.attempt_id,card_id:s.card.id,answer:p.answer});
+ p._flight=(async()=>{try{const r=await post('grade',{generation:s.generation||0,attempt_id:p.attempt_id,card_id:s.card.id,answer:p.answer});
   if(S!==s||s.pending!==p)return false;
   p.feedback=r.feedback;p.verdict=r.verdict;p.graded=!!r.verdict;
   if(['correct','partial','wrong'].includes(r.verdict)){p.rating={correct:3,partial:2,wrong:1}[r.verdict];p.correct=r.verdict==='wrong'?0:1;p.confident=null;return reviewAccept(s,p,r.review)}
@@ -265,24 +281,24 @@ async function reviewGrade(s,p){if(p.state==='saved')return true;if(p._flight)re
  }catch(_){p.state='error';reviewPersist(s);reviewRender(s);return false}finally{p._flight=null}})();return p._flight;}
 function reviewRetry(){const s=S,p=s?.pending;if(!p)return Promise.resolve(false);return p.kind==='grade'&&!p.rating?reviewGrade(s,p):reviewSave(s,p,p.rating,p.correct,p.confident)}
 async function pick(i,btn){const s=S;if(!s||s.pending)return;const c=s.card,right=i===c.correct;lock();const p=s.pending=reviewAttempt('pick',c.kind==='mcq'?c.options[i]:(i?'Верно':'Неверно'));p.selected=i;return reviewSave(s,p,right?3:1,right?1:0,null)}
-function reveal(){const s=S;if(!s||s.pending)return;lock();s.pending=reviewAttempt('reveal',$('txt').value.trim());reviewPersist(s);reviewRender(s)}
-async function check(){const s=S;if(!s||s.pending)return;const a=$('txt').value.trim();if(!a){$('txt').focus();return}lock();const p=s.pending=reviewAttempt('grade',a);return reviewGrade(s,p)}
+function reveal(){const s=S;if(!s||s.pending||(typeof cardVoiceBusy==='function'&&cardVoiceBusy()))return;if(typeof cardVoiceBeforeSubmit==='function')cardVoiceBeforeSubmit();lock();s.pending=reviewAttempt('reveal',$('txt').value.trim());reviewPersist(s);reviewRender(s)}
+async function check(){const s=S;if(!s||s.pending||(typeof cardVoiceBusy==='function'&&cardVoiceBusy()))return;const a=$('txt').value.trim();if(!a){$('txt').focus();return}if(a.length>20000)return;if(typeof cardVoiceBeforeSubmit==='function')cardVoiceBeforeSubmit();lock();const p=s.pending=reviewAttempt('grade',a);return reviewGrade(s,p)}
 async function fin(rating,correct,confident){const s=S,p=s?.pending;if(!p||p.advancing)return;p.advancing=true;
  if(p._flight)await p._flight;
  if(p.state!=='saved'&&p.state==='manual')await reviewSave(s,p,rating,correct,confident);
  if(S!==s||s.pending!==p||p.state!=='saved'){p.advancing=false;return}
  s.pos++;show();}
 function reviewRead(){try{const raw=JSON.parse(localStorage.getItem(reviewKey())||'null'),s=raw?.session;
- if(raw?.version!==1||!s||!Array.isArray(s.cards)||!s.cards.length||!Number.isInteger(s.pos)||s.pos<0||s.pos>=s.cards.length||!s.cards.every(c=>Number.isSafeInteger(c.id)&&c.id>0))return null;return s;
+ if(raw?.version!==1||!s||!Array.isArray(s.cards)||!s.cards.length||!Number.isInteger(s.pos)||s.pos<0||s.pos>=s.cards.length||!s.cards.every(c=>Number.isSafeInteger(c.id)&&c.id>0))return null;if(typeof STUDY_GENERATION!=='undefined'&&STUDY_GENERATION!=null&&(s.generation||0)!==STUDY_GENERATION)return null;return s;
  }catch(_){return null}}
-async function reviewBeforeSession(){const s=S||reviewRead(),p=s?.pending;if(!p||p.state==='saved'||p.state==='manual')return true;
+async function reviewBeforeSession(){if(typeof cardVoiceBusy==='function'&&cardVoiceBusy()){cardVoiceDraw();return false}const s=S||reviewRead(),p=s?.pending;if(!p||p.state==='saved'||p.state==='manual')return true;
  if(p._flight)await p._flight;if(p.state==='saved'||p.state==='manual')return true;
  S=s;if(!p._flight)p.state='error';await tabOnly('study');show(true);return false;}
 function reviewRestore(){try{const s=reviewRead();if(!s)return false;
  S=s;s.card=s.cards[s.pos];if(s.pending)s.pending.advancing=false;
  tabOnly('study').then(()=>{if(S!==s)return;show(true);const p=s.pending;if(p&&p.state!=='saved'&&p.state!=='manual')reviewRetry()});return true;
  }catch(_){return false}}
-async function finish(){try{localStorage.removeItem(reviewKey())}catch(_){}const st=await get('stats'+(S.subject?'?subject='+S.subject:''));const pr=await get('game');const acc=S.done?Math.round(100*S.ok/S.done):0;const sc=S;S=null;
+async function finish(){if(S?.generation&&S.mode==='lecture'&&S.availability?.unlocked_cards<S.availability?.total_cards){const s=S,seen=[...new Set([...(s.seen||[]),...s.cards.map(c=>c.id)])];try{localStorage.removeItem(reviewKey())}catch(_){}S=null;studyWaiting(s.mode,s.subject,s.terms,s.lecture,seen,s.availability);if(AU)audioOfferQuestions(AU);return}try{localStorage.removeItem(reviewKey())}catch(_){}const st=await get('stats'+(S.subject?'?subject='+S.subject:''));const pr=await get('game');const acc=S.done?Math.round(100*S.ok/S.done):0;const sc=S;S=null;
  const r=pr.rank, op=new Set(pr.opened);
  const lvl=[op.has('mastery')?`${r.emoji} ${r.name}${r.next_at?` · до ${r.next_emoji} ${r.next_name} ещё ${r.next_at-r.points} оч.`:''}`:'',op.has('streak')?`🔥 серия ${st.streak} дн`:''].filter(Boolean).join(' · ');
  $('v-study').innerHTML=`<div class="box center"><div class="big">🎌</div><h2>Сессия закончена</h2><p>Верных ${acc}%. Заработано <b class="coins">+${sc.earned||0} 🪙</b>, в кошельке ${pr.mon} 🪙.</p>
@@ -422,43 +438,57 @@ const audioActiveKey=()=>`fukushu.audio.active.${KEY}`;
 function audioRemember(id){try{localStorage.setItem(audioActiveKey(),String(id))}catch(_){}}
 function audioForget(){try{localStorage.removeItem(audioActiveKey())}catch(_){}}
 function audioRestore(explicitId=0){if(AU)return Promise.resolve();let raw;try{raw=explicitId||localStorage.getItem(audioActiveKey())}catch(_){raw=explicitId}const id=Number(raw);if(!Number.isSafeInteger(id)||id<1){if(raw)audioForget();return Promise.resolve()}return audioOpen(id,false)}
-function audioVoiceActive(){return typeof LU!=='undefined'&&!!(LU?.recording||LU?.micPending)}
+function audioVoiceActive(){return typeof LU!=='undefined'&&!!(LU?.recording||LU?.micPending)||typeof CV!=='undefined'&&!!(CV?.recording||CV?.micPending)}
 function audioLayout(){const dock=$('audio-dock');if(!dock)return;document.body.classList.toggle('has-audio',!dock.hidden);document.documentElement.style.setProperty('--audio-space',dock.hidden?'0px':Math.ceil(dock.getBoundingClientRect().height)+'px')}
 function audioDraw(){const dock=$('audio-dock');if(!dock)return;dock.hidden=!AU;if(!AU){audioLayout();return}const a=AU;
  $('audio-title').textContent=a.title||'Аудиолекция';$('audio-speed').value=String(a.playback_rate||1);$('audio-speed').disabled=!a.ready;
  audioElement().hidden=!a.ready;$('audio-questions').disabled=false;$('audio-sections').disabled=false;$('audio-retry').hidden=!a.error&&!a.pending;
  $('audio-resume').hidden=!a.pausedForVoice||!a.ready;$('audio-resume').disabled=audioVoiceActive();
  const status=$('audio-status');status.classList.toggle('error',!!a.error||!!a.saveError);status.textContent=a.error||a.saveError||a.notice||(a.loading?'Открываю аудиозапись…':a.pausedForVoice?'Лекция на паузе для голосового ответа. Продолжи, когда закончишь.':'Место прослушивания сохраняется. Можно перейти к вопросам или практике.');audioLayout()}
-function audioProgressPayload(){const a=AU,el=audioElement();if(!a?.ready||a.restoring||!a.media_id||!Number.isFinite(el.currentTime))return null;AUDIO_OBSERVED=Math.max(Date.now(),AUDIO_OBSERVED+1);return {op:'progress',lecture_id:a.lecture_id,media_id:a.media_id,position:Math.max(0,el.currentTime),playback_rate:el.playbackRate||1,observed_at:AUDIO_OBSERVED}}
+function audioTrackReset(a=AU){if(!a)return;const el=audioElement();a.sample={position:el.currentTime,at:Date.now(),rate:el.playbackRate||1,playing:!el.paused&&!el.seeking}}
+function audioPendingKey(a){return `fukushu.audio.pending.${KEY}.${a.lecture_id}.${a.media_id}.${a.generation||0}`}
+function audioPendingStore(a){try{if(a.heardPending?.length)localStorage.setItem(audioPendingKey(a),JSON.stringify(a.heardPending));else localStorage.removeItem(audioPendingKey(a))}catch(_){}}
+function audioPendingRestore(a){try{const rows=JSON.parse(localStorage.getItem(audioPendingKey(a))||'[]');if(Array.isArray(rows)&&rows.length<=30000&&rows.every(p=>Number.isSafeInteger(p.id)&&p.id>0&&[p.start,p.end,p.elapsed].every(Number.isFinite)&&p.start>=0&&p.end>p.start&&p.end-p.start<=305&&p.elapsed>0&&p.elapsed<=120000)){a.heardPending=rows;a.heardSerial=Math.max(0,...rows.map(p=>p.id))}}catch(_){}}
+function audioTrack(a=AU){if(!a?.ready||a.restoring)return;const el=audioElement(),last=a.sample,now=Date.now();if(last?.playing&&!el.seeking){const delta=el.currentTime-last.position,wall=Math.max(0,now-last.at)/1000;
+ if(delta>0&&wall>0&&delta<=wall*last.rate+1){a.heardPending??=[];const elapsed=Math.min(wall,delta/last.rate)*1000;for(let start=last.position;start<el.currentTime;){const end=Math.min(el.currentTime,start+120*last.rate);a.heardSerial=(a.heardSerial||0)+1;a.heardPending.push({id:a.heardSerial,start,end,elapsed:elapsed*(end-start)/delta});start=end}}}
+ audioTrackReset(a)}
+function audioProgressPayload(){const a=AU,el=audioElement();if(!a?.ready||a.restoring||!a.media_id||!Number.isFinite(el.currentTime))return null;audioTrack(a);AUDIO_OBSERVED=Math.max(Date.now(),AUDIO_OBSERVED+1);
+ audioPendingStore(a);const pending=[];let total=0;for(const p of a.heardPending||[]){if(total+p.elapsed>120000||pending.length>=64)break;pending.push(p);total+=p.elapsed}const intervals=[];for(const p of [...pending].sort((x,y)=>x.start-y.start)){const last=intervals.at(-1);if(last&&p.start<=last[1]+.001)last[1]=Math.max(last[1],p.end);else intervals.push([p.start,p.end])}
+ const payload={op:'progress',lecture_id:a.lecture_id,media_id:a.media_id,generation:a.generation||0,position:Math.max(0,el.currentTime),playback_rate:el.playbackRate||1,observed_at:AUDIO_OBSERVED,played_intervals:intervals,elapsed_ms:total};Object.defineProperty(payload,'heardThrough',{value:pending.at(-1)?.id||0});return payload}
+function audioSaved(a,payload,result){a.heardPending=(a.heardPending||[]).filter(p=>p.id>payload.heardThrough);audioPendingStore(a);if(AU!==a)return;if(a.saveError){a.saveError='';audioDraw()}if(result?.unlocked_cards!=null){Object.assign(a,result);audioOfferQuestions(a)}if(a.heardPending.length&&payload.heardThrough)audioSave()}
+function audioOfferQuestions(a){if(typeof WAITING_LECTURE!=='undefined'&&WAITING_LECTURE?.lecture===a.lecture_id&&a.unlocked_cards>(WAITING_LECTURE.unlocked||0)&&$('study-waiting')){const w=WAITING_LECTURE;WAITING_LECTURE=null;startSession(w.mode,w.subject,w.terms,w.lecture,w.seen||[]);return}
+ if(!S||S.mode!=='lecture'||S.lecture!==a.lecture_id)return;const shown=new Set([...(S.seen||[]),...S.cards.map(c=>c.id)]),count=Math.max(0,(a.unlocked_cards||0)-shown.size),banner=$('study-new-cards');if(banner){banner.hidden=!count;if(count)banner.innerHTML=`<span>Открылись новые вопросы: ${count}.</span><br><button class="btn sm" onclick="audioAddQuestions()">Добавить к занятию</button>`}}
+async function audioAddQuestions(){const s=S;if(!s||s.mode!=='lecture')return;const r=await get(`session?mode=lecture&subject=${s.subject||''}&terms=${s.terms||0}&lecture=${s.lecture}`);if(S!==s||(r.generation||0)!==(s.generation||0))return;const shown=new Set([...(s.seen||[]),...s.cards.map(c=>c.id)]);for(const c of r.cards)if(!shown.has(c.id)){s.cards.push(c);shown.add(c.id)}s.availability=r.availability;reviewPersist(s);if(AU)audioOfferQuestions(AU);if(!s.pending&&typeof cardVoiceBusy==='function'&&!cardVoiceBusy()){s.draft=$('txt')?.value||s.draft;show(true)}}
 function audioSave(urgent=false){const payload=audioProgressPayload();if(!payload)return Promise.resolve();const current=AU;AUDIO_LAST_SAVE=Date.now();
- if(urgent){try{const sent=fetch(API+'audio',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),keepalive:true});sent.catch(()=>{});return sent}catch(_){return Promise.resolve()}}
- const task=AUDIO_SAVE_CHAIN.catch(()=>{}).then(()=>post('audio',payload));AUDIO_SAVE_CHAIN=task.catch(()=>{});return task.then(()=>{if(AU===current&&current.saveError){current.saveError='';audioDraw()}},()=>{if(AU===current){current.saveError='Не удалось сохранить место. Повторю при следующей паузе.';audioDraw()}})}
-function audioDetach(){const el=audioElement();el.onloadedmetadata=null;el.ontimeupdate=null;el.onpause=null;el.onratechange=null;el.onseeked=null;el.onended=null;el.onerror=null;el.onplay=null;el.pause();el.removeAttribute('src');el.load()}
+ if(urgent){try{const sent=fetch(API+'audio',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),keepalive:true});sent.then(async r=>{if(r.ok&&typeof r.json==='function')audioSaved(current,payload,await r.json())}).catch(()=>{});return sent}catch(_){return Promise.resolve()}}
+ const task=AUDIO_SAVE_CHAIN.catch(()=>{}).then(()=>post('audio',payload));AUDIO_SAVE_CHAIN=task.catch(()=>{});return task.then(result=>audioSaved(current,payload,result),()=>{if(AU===current){current.saveError='Не удалось сохранить место и открытые вопросы. Повторю при следующей паузе.';audioDraw()}})}
+function audioDetach(){const el=audioElement();el.onloadedmetadata=null;el.ontimeupdate=null;el.onpause=null;el.onratechange=null;el.onseeked=null;el.onseeking=null;el.onended=null;el.onerror=null;el.onplay=null;el.pause();el.removeAttribute('src');el.load()}
 async function audioPlay(){const a=AU,el=audioElement();if(!a?.ready)return;if(audioVoiceActive()){a.notice='Сначала закончи голосовой ответ, затем продолжи лекцию.';audioDraw();return}a.pausedForVoice=false;a.restoreDisabled=false;audioRemember(a.lecture_id);a.notice='';a.error='';audioDraw();try{await el.play()}catch(_){if(AU===a){a.notice='Нажми Play на плеере, чтобы начать прослушивание.';audioDraw()}}}
 async function audioOpen(id,play=true){id=Number(id);if(!Number.isInteger(id)||id<1)return;if(AU?.lecture_id===id&&AU.ready){if(play)await audioPlay();return}const request=++AUDIO_REQUEST;audioSave();audioDetach();const a=AU={lecture_id:id,title:'Открываю аудиолекцию…',loading:true,ready:false,shouldPlay:play,playback_rate:1,error:'',notice:''};audioDraw();
  try{let info=await get('audio?lecture_id='+id);if(AUDIO_REQUEST!==request||AU!==a)return;
   if(info.state==='needs_conversion'){a.title=info.title;a.notice='Готовлю запись для плеера. Пока можно проходить вопросы.';audioDraw();info=await post('audio',{op:'prepare',lecture_id:id})}
   while(info.pending){if(AUDIO_REQUEST!==request||AU!==a)return;a.title=info.title||a.title;a.notice=info.notice||'Готовлю запись для плеера. Пока можно проходить вопросы.';audioDraw();await new Promise(resolve=>setTimeout(resolve,1500));if(AUDIO_REQUEST!==request||AU!==a)return;info=await post('audio',{op:'poll',job:info.job})}
-  if(AUDIO_REQUEST!==request||AU!==a)return;Object.assign(a,info,{lecture_id:id,loading:false});
+  if(AUDIO_REQUEST!==request||AU!==a)return;if(typeof studyGeneration==='function'&&(info.generation||0)<studyGeneration()){a.loading=false;a.error='Прогресс изменился. Открой лекцию заново.';audioDraw();return}Object.assign(a,info,{lecture_id:id,loading:false});audioPendingRestore(a);
   if(!info.available||!info.media_id){audioForget();a.pending=!!info.pending;a.notice=info.notice||(info.pending?'Готовлю запись для плеера. Попробуй открыть её чуть позже.':'У этого материала пока нет доступной аудиозаписи. Можно заниматься по вопросам и разделам.');audioDraw();return}
   const el=audioElement();a.ready=true;a.restoring=true;a.playback_rate=Number(info.playback_rate)||1;a.notice=info.notice||'';a.url=API+'audio_stream?lecture_id='+id+'&media_id='+encodeURIComponent(info.media_id);AUDIO_LAST_SAVE=Date.now();
   if(!a.restoreDisabled)audioRemember(id);
-  el.onloadedmetadata=()=>{if(AU!==a||AUDIO_REQUEST!==request)return;const duration=el.duration,saved=Math.max(0,Number(info.position)||0);try{el.currentTime=Number.isFinite(duration)&&duration>0?Math.min(saved,Math.max(0,duration-.1)):saved;el.playbackRate=a.playback_rate}catch(_){}a.restoring=false;audioDraw();if(a.shouldPlay)audioPlay()};
-  el.ontimeupdate=()=>{if(AU===a&&!a.restoring&&Date.now()-AUDIO_LAST_SAVE>=10000)audioSave()};
-  el.onpause=()=>{if(AU===a&&!a.restoring)audioSave()};el.onseeked=()=>{if(AU===a&&!a.restoring)audioSave()};
-  el.onratechange=()=>{if(AU!==a||a.restoring)return;a.playback_rate=el.playbackRate;audioDraw();audioSave()};
+  el.onloadedmetadata=()=>{if(AU!==a||AUDIO_REQUEST!==request)return;const duration=el.duration,saved=Math.max(0,Number(info.position)||0);try{el.currentTime=Number.isFinite(duration)&&duration>0?Math.min(saved,Math.max(0,duration-.1)):saved;el.playbackRate=a.playback_rate}catch(_){}a.restoring=false;audioTrackReset(a);audioDraw();if(a.shouldPlay)audioPlay()};
+  el.ontimeupdate=()=>{if(AU!==a||a.restoring)return;audioTrack(a);if(Date.now()-AUDIO_LAST_SAVE>=10000)audioSave()};
+  el.onpause=()=>{if(AU===a&&!a.restoring)audioSave()};el.onseeking=()=>{if(AU===a)a.sample=null};el.onseeked=()=>{if(AU===a&&!a.restoring){audioTrackReset(a);audioSave()}};
+  el.onratechange=()=>{if(AU!==a||a.restoring)return;audioTrack(a);a.playback_rate=el.playbackRate;audioDraw();audioSave()};
   el.onended=()=>{if(AU!==a)return;audioSave();a.notice='Лекция закончилась. Можно продолжить практику или вернуться к ней завтра.';audioDraw()};
   el.onerror=()=>{if(AU!==a||AUDIO_REQUEST!==request)return;
    const failed=()=>{if(AU!==a)return;a.restoring=false;a.error='Не получилось воспроизвести запись. Попробуй открыть её ещё раз.';a.ready=false;audioDraw()};
    if(typeof window!=='undefined'&&window.FukushuConnection?.hosted&&!a.reconnectTried){a.reconnectTried=true;const old=a.url;window.FukushuConnection.reconnect(true).then(()=>{if(AU===a&&a.url===old)failed()},failed);return}failed()};
-  el.onplay=()=>{if(AU!==a)return;if(audioVoiceActive()){el.pause();a.pausedForVoice=true;a.notice='Лекция на паузе, пока открыт микрофон.'}else{a.pausedForVoice=false;a.restoreDisabled=false;audioRemember(id);a.notice='';a.error=''}audioDraw()};
+  el.onplay=()=>{if(AU!==a)return;if(audioVoiceActive()){el.pause();a.pausedForVoice=true;a.notice='Лекция на паузе, пока открыт микрофон.'}else{a.pausedForVoice=false;a.restoreDisabled=false;audioRemember(id);a.notice='';a.error=''}audioTrackReset(a);audioDraw()};
   el.src=a.url;el.load();audioDraw()
  }catch(_){if(AU===a&&AUDIO_REQUEST===request){a.loading=false;a.error='Не получилось открыть аудиозапись. Проверь соединение и попробуй ещё раз.';audioDraw()}}}
 function audioReconnect(){const a=AU,el=audioElement();if(!a?.ready||!a.media_id)return;
  const url=API+'audio_stream?lecture_id='+a.lecture_id+'&media_id='+encodeURIComponent(a.media_id);if(a.url===url)return;
  const position=Number.isFinite(el.currentTime)?el.currentTime:0,rate=el.playbackRate||a.playback_rate||1;const wasPlaying=!el.paused;
+ audioTrack(a);audioSave();
  a.restoring=true;a.shouldPlay=false;el.pause();a.url=url;a.error='';a.loading=true;a.notice='Переподключаю аудиолекцию…';audioDraw();
- el.onloadedmetadata=()=>{if(AU!==a)return;try{el.currentTime=Number.isFinite(el.duration)?Math.min(position,el.duration):position;el.playbackRate=rate}catch(_){}a.playback_rate=rate;a.restoring=false;a.loading=false;a.reconnectTried=false;a.notice=wasPlaying?'Связь восстановлена. Нажми Play, чтобы продолжить лекцию.':'Место прослушивания сохранено. Можно продолжить с паузы.';audioDraw()};
+ el.onloadedmetadata=()=>{if(AU!==a)return;try{el.currentTime=Number.isFinite(el.duration)?Math.min(position,el.duration):position;el.playbackRate=rate}catch(_){}a.playback_rate=rate;a.restoring=false;audioTrackReset(a);a.loading=false;a.reconnectTried=false;a.notice=wasPlaying?'Связь восстановлена. Нажми Play, чтобы продолжить лекцию.':'Место прослушивания сохранено. Можно продолжить с паузы.';audioDraw()};
  el.src=url;el.load()}
 window.addEventListener('fukushu:backend-changed',audioReconnect);
 function audioSpeed(value){const rate=Number(value);if(AU?.ready&&[.75,1,1.25,1.5,1.75,2].includes(rate)){audioElement().playbackRate=rate;AU.playback_rate=rate;audioSave();audioDraw()}}
@@ -500,7 +530,7 @@ async function learnUpload(l,blob,mime){if(LU!==l||!l.view)return;if(!blob.size|
  try{const response=await fetch(API+`learning_voice?lecture_id=${l.id}&section_id=${encodeURIComponent(section)}&source_hash=${hash}`,{method:'POST',headers:{'Content-Type':mime||blob.type},body:blob}),r=await response.json();if(!response.ok)throw r.error||'Не получилось загрузить аудио.';const result=await learnWait(l,r);if(LU===l)learnApply(l,result)}catch(err){if(LU===l)l.error=String(err)}finally{if(LU===l){l.busy=false;learnDraw()}}}
 function learnFile(input){const file=input.files?.[0],l=LU;if(!file||!l||l.busy)return;const types={webm:'audio/webm',ogg:'audio/ogg',oga:'audio/ogg',mp3:'audio/mpeg',m4a:'audio/mp4',mp4:'audio/mp4',wav:'audio/wav',flac:'audio/flac',aac:'audio/aac'};learnUpload(l,file,file.type||types[file.name.split('.').pop().toLowerCase()]||'application/octet-stream')}
 function learnStop(cancel=false){const l=LU;try{if(typeof window!=='undefined')window.FukushuFX?.voiceStop?.()}catch(_){}if(!l)return;if(l.record){l.record.cancelled=cancel;if(l.record.recorder.state!=='inactive')l.record.recorder.stop();l.record.stream.getTracks().forEach(t=>t.stop());clearInterval(l.record.timer)}l.recording=false}
-async function learnRecord(){const l=LU;if(!l||l.busy||l.micPending)return;if(l.recording){learnStop();return}if(!navigator.mediaDevices?.getUserMedia||typeof MediaRecorder==='undefined'){l.error='Этот браузер не умеет записывать голос. Нажми «Загрузить аудио» или ответь текстом.';learnDraw();return}l.micPending=true;l.error='';if(typeof audioPauseForVoice==='function')audioPauseForVoice();learnDraw();
+async function learnRecord(){const l=LU;if(!l||l.busy||l.micPending)return;if(typeof CV!=='undefined'&&(CV?.recording||CV?.micPending))return;if(l.recording){learnStop();return}if(!navigator.mediaDevices?.getUserMedia||typeof MediaRecorder==='undefined'){l.error='Этот браузер не умеет записывать голос. Нажми «Загрузить аудио» или ответь текстом.';learnDraw();return}l.micPending=true;l.error='';if(typeof audioPauseForVoice==='function')audioPauseForVoice();learnDraw();
  try{const stream=await navigator.mediaDevices.getUserMedia({audio:true});if(LU!==l){stream.getTracks().forEach(t=>t.stop());return}const mime=['audio/webm;codecs=opus','audio/ogg;codecs=opus','audio/mp4'].find(x=>MediaRecorder.isTypeSupported(x)),recorder=new MediaRecorder(stream,mime?{mimeType:mime}:undefined),record={stream,recorder,chunks:[],bytes:0,cancelled:false,started:Date.now()};l.record=record;l.recording=true;
  recorder.ondataavailable=event=>{if(event.data.size){record.chunks.push(event.data);record.bytes+=event.data.size;if(record.bytes>20*1024*1024){l.error='Запись превысила 20 МБ. Запиши ответ короче.';learnStop(true);if(LU===l)learnDraw()}}};
  recorder.onstop=()=>{try{if(typeof window!=='undefined')window.FukushuFX?.voiceStop?.()}catch(_){}clearInterval(record.timer);stream.getTracks().forEach(t=>t.stop());if(LU===l){l.record=null;l.recording=false;if(!record.cancelled)learnUpload(l,new Blob(record.chunks,{type:recorder.mimeType||mime||'audio/webm'}),recorder.mimeType||mime||'audio/webm');else learnDraw()}if(typeof audioRefreshVoice==='function')audioRefreshVoice()};
@@ -508,6 +538,47 @@ async function learnRecord(){const l=LU;if(!l||l.busy||l.micPending)return;if(l.
  catch(_){try{if(typeof window!=='undefined')window.FukushuFX?.voiceStop?.()}catch(_){}if(LU===l){l.recording=false;l.error='Не получилось открыть микрофон. Разреши доступ в браузере или загрузи аудиофайл.';l.record?.stream.getTracks().forEach(t=>t.stop());l.record=null}}
  finally{if(LU===l){l.micPending=false;learnDraw()}if(typeof audioRefreshVoice==='function')audioRefreshVoice()}}
 if(typeof window.addEventListener==='function')window.addEventListener('pagehide',()=>learnStop(true));
+// ---------- диктовка ответа на карточку ----------
+let CV=null;
+function cardVoiceBusy(){return !!(CV?.session===S&&CV.card_id===S?.card?.id&&(CV.recording||CV.micPending||CV.busy))||!!(S?.voice?.job&&!S.voice.paused)}
+function cardVoiceCurrent(v){return !!v&&CV===v&&S===v.session&&S.card?.id===v.card_id&&!S.pending}
+function cardVoiceDraw(){const s=S;if(!s||s.pending||!$('card-mic'))return;const v=CV?.session===s&&CV.card_id===s.card?.id?CV:null,busy=!!(v?.recording||v?.micPending||v?.busy||s.voice?.job&&!s.voice.paused),recording=!!v?.recording;
+ const mic=$('card-mic');mic.disabled=!!(v?.micPending||v?.busy||s.voice?.job&&!s.voice.paused);mic.setAttribute('aria-pressed',String(recording));mic.classList.toggle('recording',recording);mic.querySelector('span').textContent=recording?'Остановить и распознать':v?.micPending?'Открываю микрофон…':'Ответить голосом';
+ $('card-voice-cancel').hidden=!(recording||v?.micPending||v?.busy||s.voice?.job);$('card-voice-cancel').textContent=recording||v?.micPending?'Отменить запись':'Отменить распознавание';$('card-voice-retry').hidden=!(v?.error&&!v?.busy&&(v?.blob||s.voice?.job));
+ $('txt').disabled=busy;$('chk').disabled=busy;$('rev').disabled=busy;
+ const status=$('card-voice-status');status.textContent=v?.error||v?.notice||(s.voice?.job?'Распознаю речь. Текст появится здесь, отправка на проверку — отдельной кнопкой.':'Лекция встанет на паузу. После диктовки проверь текст и нажми «Проверить мой ответ».');status.classList.toggle('voice-error',!!v?.error);
+ if(typeof audioRefreshVoice==='function')audioRefreshVoice()}
+function cardVoiceStop(v=CV,cancel=false){if(!v)return;v.cancelled=cancel;v.micPending=false;v.recording=false;clearInterval(v.timer);try{if(CV===v)window.FukushuFX?.voiceStop?.()}catch(_){}
+ try{if(v.recorder?.state!=='inactive')v.recorder?.stop()}finally{v.stream?.getTracks().forEach(t=>t.stop())}if(cardVoiceCurrent(v))cardVoiceDraw()}
+function cardVoiceLeave(){const v=CV;if(v&&(v.recording||v.micPending))cardVoiceStop(v,true);if(v&&!v.busy)CV=null}
+function cardVoiceCancel(){const v=CV;if(!v)return;const current=cardVoiceCurrent(v);cardVoiceStop(v,true);v.busy=false;v.blob=null;if(current){delete v.session.voice;CV={session:v.session,card_id:v.card_id,generation:v.generation,notice:'Запись отменена. Можно попробовать ещё раз или ответить текстом.'};reviewPersist(v.session);cardVoiceDraw()}}
+function cardVoiceBeforeSubmit(){if(S?.voice?.paused)cardVoiceCancel()}
+async function cardVoiceRecord(){const s=S;if(!s||s.pending)return;if(CV?.session===s&&CV.recording){cardVoiceStop();return}if(cardVoiceBusy()||typeof LU!=='undefined'&&(LU?.recording||LU?.micPending))return;
+ if(!navigator.mediaDevices?.getUserMedia||typeof MediaRecorder==='undefined'){CV={session:s,card_id:s.card.id,error:'Запись голоса недоступна. Открой приложение в Safari или Chrome и разреши микрофон. Здесь можно ответить текстом.'};cardVoiceDraw();return}
+ if(s.voice?.paused)delete s.voice;reviewDraft();const v=CV={session:s,card_id:s.card.id,generation:s.generation||0,baseDraft:s.draft||'',micPending:true,notice:'Разреши доступ к микрофону.'};audioPauseForVoice();cardVoiceDraw();
+ try{const stream=await navigator.mediaDevices.getUserMedia({audio:true});if(!cardVoiceCurrent(v)||v.cancelled){stream.getTracks().forEach(t=>t.stop());return}v.stream=stream;
+ const mime=['audio/webm;codecs=opus','audio/ogg;codecs=opus','audio/mp4'].find(x=>MediaRecorder.isTypeSupported(x));const recorder=v.recorder=new MediaRecorder(stream,mime?{mimeType:mime}:undefined);v.recording=true;v.micPending=false;v.chunks=[];v.bytes=0;v.started=Date.now();v.notice='Говори своими словами. Затем нажми «Остановить и распознать».';
+ recorder.ondataavailable=event=>{if(event.data.size){v.chunks.push(event.data);v.bytes+=event.data.size;if(v.bytes>20*1024*1024){v.error='Запись больше 20 МБ. Запиши ответ короче.';cardVoiceStop(v,true)}}};
+ recorder.onstop=()=>{clearInterval(v.timer);stream.getTracks().forEach(t=>t.stop());v.recording=false;try{if(CV===v)window.FukushuFX?.voiceStop?.()}catch(_){}if(cardVoiceCurrent(v)&&!v.cancelled){v.blob=new Blob(v.chunks,{type:recorder.mimeType||mime||'audio/webm'});cardVoiceUpload(v)}else if(cardVoiceCurrent(v))cardVoiceDraw();audioRefreshVoice()};
+ recorder.onerror=()=>{v.error='Запись прервалась. Проверь доступ к микрофону и попробуй ещё раз.';cardVoiceStop(v,true)};
+ recorder.start(1000);try{window.FukushuFX?.voiceStart?.(stream,'#txt')}catch(_){}
+ v.timer=setInterval(()=>{const seconds=Math.floor((Date.now()-v.started)/1000);v.notice=`Идёт запись: ${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')}. Нажми «Остановить и распознать».`;if(cardVoiceCurrent(v))cardVoiceDraw();if(seconds>=300)cardVoiceStop(v)},1000);
+ }catch(_){v.error='Не получилось открыть микрофон. Разреши доступ в браузере и попробуй ещё раз.';cardVoiceStop(v,true)}finally{v.micPending=false;if(cardVoiceCurrent(v))cardVoiceDraw()}}
+async function cardVoiceUpload(v){if(!cardVoiceCurrent(v))return;if(!v.blob?.size||v.blob.size>20*1024*1024){v.error='Запись пустая или больше 20 МБ. Попробуй записать короче.';cardVoiceDraw();return}v.busy=true;v.error='';v.notice='Распознаю речь. Потом можно будет исправить текст.';cardVoiceDraw();
+ try{const response=await fetch(API+`card_voice?card_id=${v.card_id}&generation=${v.generation}`,{method:'POST',headers:{'Content-Type':v.blob.type},body:v.blob}),r=await response.json();if(r.reset)studyApplyGeneration(r.generation);if(!response.ok)throw cardVoiceFault(r.error||'Не получилось передать запись.',true);
+ if(!cardVoiceCurrent(v))return;v.session.voice={job:r.job,card_id:v.card_id,generation:v.generation,baseDraft:v.baseDraft};reviewPersist(v.session);await cardVoiceWait(v,r);
+ }catch(err){cardVoiceFailure(v,err)}finally{v.busy=false;if(cardVoiceCurrent(v)){reviewPersist(v.session);cardVoiceDraw()}}}
+function cardVoiceFault(message,terminal=false){const error=new Error(message);error.terminal=terminal;return error}
+function cardVoiceFailure(v,err){if(!cardVoiceCurrent(v))return;v.error=String(err?.message||err);v.notice='';if(v.session.voice){if(err?.terminal||!v.session.voice.job)delete v.session.voice;else v.session.voice.paused=true}reviewPersist(v.session)}
+async function cardVoicePoll(v,job){const response=await fetch(API+'card_voice',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({op:'poll',job,generation:v.generation})}),r=await response.json();if(r.reset)studyApplyGeneration(r.generation);if(!response.ok)throw cardVoiceFault(r.error||'Не удалось получить расшифровку.',true);return r}
+async function cardVoiceWait(v,r){while(r.pending){if(!cardVoiceCurrent(v))return;await new Promise(resolve=>setTimeout(resolve,1500));if(!cardVoiceCurrent(v))return;r=await cardVoicePoll(v,r.job)}
+ if(!cardVoiceCurrent(v))return;if(r.card_id!==v.card_id||r.generation!=null&&r.generation!==v.generation)throw cardVoiceFault('Ответ относится к другому вопросу. Запиши его ещё раз.',true);
+ const text=String(r.transcript||'').trim();if(!text)throw cardVoiceFault('Не удалось разобрать слова. Попробуй говорить ближе к микрофону.',true);
+ const combined=[v.baseDraft.trim(),text].filter(Boolean).join('\n');if(combined.length>20000)throw cardVoiceFault('Получилось больше 20 000 знаков. Сократи текст или запиши ответ короче.',true);
+ v.session.draft=combined;delete v.session.voice;v.blob=null;v.error='';v.notice='Речь распознана. Проверь текст и нажми «Проверить мой ответ».';$('txt').value=combined;reviewPersist(v.session)}
+function cardVoiceRetry(){const v=CV;if(!cardVoiceCurrent(v)||v.busy)return;v.baseDraft=v.session.draft||'';if(v.session.voice?.job){v.busy=true;v.error='';v.session.voice.baseDraft=v.baseDraft;v.session.voice.paused=false;reviewPersist(v.session);cardVoiceDraw();return cardVoiceWait(v,{pending:true,job:v.session.voice.job}).catch(err=>cardVoiceFailure(v,err)).finally(()=>{v.busy=false;if(cardVoiceCurrent(v))cardVoiceDraw()})}else return cardVoiceUpload(v)}
+function cardVoiceRestore(){const s=S;if(!s?.voice?.job||CV?.session===s&&CV.busy)return;if(s.voice.card_id!==s.card?.id||s.voice.generation!==(s.generation||0)){delete s.voice;reviewPersist(s);return}const v=CV={session:s,card_id:s.voice.card_id,generation:s.voice.generation,baseDraft:typeof s.draft==='string'?s.draft:s.voice.baseDraft||'',busy:true,notice:'Продолжаю распознавание записи…'};s.voice.paused=false;cardVoiceDraw();return cardVoiceWait(v,{pending:true,job:s.voice.job}).catch(err=>cardVoiceFailure(v,err)).finally(()=>{v.busy=false;if(cardVoiceCurrent(v))cardVoiceDraw()})}
+if(typeof window.addEventListener==='function')window.addEventListener('pagehide',()=>cardVoiceLeave());
 // ---------- «Объясни проще»: разговор с преподавателем ----------
 let TU=null;
 function tuDraw(){const t=TU,el=$('tutor');if(!t){el.hidden=true;return}el.hidden=false;
@@ -635,11 +706,12 @@ async function taskReview(){const t=TK;if(!t||t._actionBusy)return;t._actionBusy
  catch(err){t._actionError=tkError(err);if(TK===t)$('tkrev').innerHTML=tkReviewHtml(t)}finally{t._actionBusy=false;tkActionState(t)}}
 async function homeTasks(){try{const T=(await get('tasks')).tasks,n=T.filter(t=>!t.done).length,el=$('hometasks');if(!el||!T.length)return;
  el.innerHTML=`<div class="box" style="padding:12px 14px;margin-bottom:14px;display:flex;gap:12px;align-items:center;flex-wrap:wrap"><div style="flex:1;min-width:200px"><b>📝 Практика</b><br><small class="hint">${n?`🔴 Не сделано заданий из лекций: ${n} из ${T.length}`:`✅ Все ${T.length} заданий сделаны`}</small></div><button class="btn sm${n?' pri':''}" onclick="tab('practice')" style="flex:0 1 160px">Открыть</button></div>`}catch(_){}}
-function appStart(){
+async function appStart(){
+let overview;try{overview=await get('overview');if(!studyApplyGeneration(overview.generation??0))throw Error('stale progress')}catch(_){$('v-home').innerHTML='<div class="box"><p>Не получилось загрузить актуальный прогресс. Проверь соединение и попробуй ещё раз.</p><button class="btn pri" onclick="appStart()">Повторить</button></div>';return}
 const T0=window.FukushuConnection?.route() ?? location.hash.slice(1);
-if((!T0||T0==='study')&&reviewRestore()){loadHome()}
-else if(['study','glossary','stats','errors','dojo','practice'].includes(T0)){loadHome();tab(T0)}
-else if(/^task-[0-9]+$/.test(T0)){loadHome();openTask(+T0.slice(5))}else if(/^learn-[0-9]+$/.test(T0)){loadHome();openLesson(+T0.slice(6))}else if(/^listen-[0-9]+$/.test(T0)){loadHome();openLesson(+T0.slice(7))}else loadHome();
+if((!T0||T0==='study')&&reviewRestore()){loadHome(overview)}
+else if(['study','glossary','stats','errors','dojo','practice'].includes(T0)){loadHome(overview);tab(T0)}
+else if(/^task-[0-9]+$/.test(T0)){loadHome(overview);openTask(+T0.slice(5))}else if(/^learn-[0-9]+$/.test(T0)){loadHome(overview);openLesson(+T0.slice(6))}else if(/^listen-[0-9]+$/.test(T0)){loadHome(overview);openLesson(+T0.slice(7))}else loadHome(overview);
 audioRestore(/^listen-[0-9]+$/.test(T0)?+T0.slice(7):0);
 }
 if(window.FukushuConnection)window.FukushuConnection.start(appStart);else appStart();

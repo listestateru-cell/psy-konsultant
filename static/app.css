@@ -12,3 +12,15 @@ html{scroll-padding-bottom:180px}body{background:var(--bg);letter-spacing:-.012e
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition:none!important;scroll-behavior:auto!important}}
 
 .ans [data-fx-busy="true"]{color:var(--mute)}
+/* A voice draft stays in the same answer field; submitting remains explicit. */
+.answer-label{display:block;font-weight:600;margin:16px 0 8px}
+.card-voice{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px}
+.card-voice .btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:48px;flex:0 1 auto}
+.card-voice .btn[hidden]{display:none}
+.card-voice .recording{border-color:var(--bad);color:var(--bad);background:var(--soft)}
+.card-voice svg{flex:none}
+#card-voice-status{min-height:3em;margin:10px 0 16px;max-width:70ch}
+.voice-error{color:var(--bad)}
+#study-new-cards{padding:12px 14px;margin:12px 0;border:1px solid var(--line);border-radius:14px;background:var(--soft)}
+#study-new-cards .btn{margin-top:8px}
+@media(max-width:600px){.card-voice{align-items:stretch}.card-voice .btn{flex:1 1 100%}}
