@@ -255,7 +255,7 @@ function setOut(html,opts,q,details=''){const s=S,p=s.pending;$('out').innerHTML
  document.querySelectorAll('#out [data-k]').forEach(b=>b.onclick=()=>{if(S===s&&s.pending===p)fin(...opts[+b.dataset.k].slice(1))});}
 function lock(){document.querySelectorAll('#act button,#act textarea').forEach(x=>x.disabled=true)}
 function reviewKey(){return 'fukushu.review.session.'+KEY}
-function reviewResumeLecture(id){const s=S||reviewRead();if(!s||!['lecture','due'].includes(s.mode)||!s.cards?.length)return false;const lecture=Number(id);if(!Number.isSafeInteger(lecture)||lecture<1||!s.cards.every(c=>Number(c.lecture_id)===lecture))return false;return reviewRestore()}
+function reviewResumeLecture(id){const s=S||reviewRead();if(!s||!['lecture','due'].includes(s.mode)||!s.cards?.length)return false;const lecture=Number(id);if(!Number.isSafeInteger(lecture)||lecture<1||!s.cards.every(c=>Number(c.lecture_id)===lecture))return false;learnLeave();return reviewRestore()}
 let REVIEW_SYNC=null,REVIEW_SYNC_TIMER=null,REVIEW_SYNC_TYPED=0;
 function reviewPersist(s=S){if(!s||S!==s)return;try{localStorage.setItem(reviewKey(),JSON.stringify({version:1,session:s},(k,v)=>k==='_flight'?undefined:v));s.storageError=false}catch(_){s.storageError=true}if(REVIEW_SYNC){REVIEW_SYNC.changed(s);if(s.pending)REVIEW_SYNC.flush()}}
 function reviewClear(){try{localStorage.removeItem(reviewKey())}catch(_){}if(typeof REVIEW_SYNC!=='undefined'&&REVIEW_SYNC){REVIEW_SYNC.changed(null);REVIEW_SYNC.flush()}}
