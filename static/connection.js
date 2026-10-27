@@ -7,6 +7,7 @@
   const localPreview = ['localhost', '127.0.0.1'].includes(location.hostname);
   const accountKey = 'fukushu.launch.key.v1';
   const endpointKey = 'fukushu.endpoint.v1';
+  const gatewayStatuses = new Set([502, 503, 504, 530]);
   const validKey = value => /^[A-Za-z0-9_-]{8,128}$/.test(value || '');
   const read = name => { try { return localStorage.getItem(name); } catch (_) { return null; } };
   const write = (name, value) => { try { localStorage.setItem(name, value); } catch (_) {} };
@@ -96,6 +97,13 @@
     note.hidden = false; note.querySelector('span').textContent = text; note.querySelector('button').hidden = !retry;
   }
 
+  function receivedApiResponse(response) {
+    // Application errors still prove the Mac answered. Clear only the stale
+    // connectivity note; startup, discovery and retry ownership stay unchanged.
+    if (response.status >= 100 && !gatewayStatuses.has(response.status) && note) note.hidden = true;
+    return response;
+  }
+
   function updateManifest() {
     if (!origin || !validKey(key)) return;
     const link = document.querySelector('link[rel="manifest"]');
@@ -181,8 +189,8 @@
     const previous = origin;
     let failure;
     try {
-      const response = await nativeFetch(origin + url.pathname + url.search, {...options, mode: 'cors', credentials: 'omit', referrerPolicy: 'no-referrer'});
-      if (![502, 503, 504, 530].includes(response.status)) return response;
+      const response = receivedApiResponse(await nativeFetch(origin + url.pathname + url.search, {...options, mode: 'cors', credentials: 'omit', referrerPolicy: 'no-referrer'}));
+      if (!gatewayStatuses.has(response.status)) return response;
       failure = new Error('Связь с компьютером прервалась.');
     } catch (error) { if (options.signal?.aborted) throw error; failure = error; }
     try { await reconnect(true); }
@@ -190,7 +198,7 @@
     // Never automatically repeat purchases, uploads or other writes after an
     // ambiguous response. Their native save/retry UI keeps the original input.
     if (['GET', 'HEAD'].includes(method) && origin !== previous) {
-      return nativeFetch(origin + url.pathname + url.search, {...options, mode: 'cors', credentials: 'omit', referrerPolicy: 'no-referrer'});
+      return receivedApiResponse(await nativeFetch(origin + url.pathname + url.search, {...options, mode: 'cors', credentials: 'omit', referrerPolicy: 'no-referrer'}));
     }
     throw failure;
   };
