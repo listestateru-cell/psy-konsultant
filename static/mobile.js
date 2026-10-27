@@ -72,6 +72,7 @@
     const layoutHeight = document.documentElement.clientHeight || window.innerHeight;
     const obscured = viewport ? Math.max(0, layoutHeight - viewport.height - viewport.offsetTop) : 0;
     const keyboard = narrow.matches && editable(document.activeElement) && obscured > 120 && (!viewport || viewport.scale < 1.2);
+    if (keyboard) expandedAudio = false;
     body.classList.toggle('mobile-keyboard-open', keyboard);
     root.style.setProperty('--mobile-keyboard-offset', keyboard ? `${Math.round(obscured)}px` : '0px');
     body.dataset.mobile = narrow.matches ? 'true' : 'false';
@@ -88,9 +89,11 @@
       toggle.type = 'button';
       toggle.className = 'mobile-audio-toggle';
       toggle.setAttribute('aria-label', 'Показать настройки аудиолекции');
-      toggle.innerHTML = icon('<path d="M3 13v-1a9 9 0 0 1 18 0v1"/><rect x="3" y="12" width="4" height="8" rx="2"/><rect x="17" y="12" width="4" height="8" rx="2"/>') + '<span></span>' + chevron;
+      toggle.innerHTML = '<span></span>' + chevron;
+      toggle.setAttribute('aria-controls', 'lecture-audio audio-position audio-learning-progress audio-questions audio-sections audio-speed audio-status');
       dock.prepend(toggle);
       toggle.addEventListener('click', () => {
+        toggle.focus({preventScroll: true});
         expandedAudio = !expandedAudio;
         refresh();
       });
@@ -99,7 +102,8 @@
     const label = toggle.querySelector('span');
     if (label.textContent !== title) label.textContent = title;
     toggle.setAttribute('aria-expanded', String(expandedAudio));
-    toggle.setAttribute('aria-label', expandedAudio ? 'Свернуть настройки аудиолекции' : 'Показать настройки аудиолекции');
+    toggle.setAttribute('aria-label', `${expandedAudio ? 'Свернуть' : 'Развернуть'} аудиолекцию: ${title}`);
+    toggle.setAttribute('title', title);
     dock.classList.toggle('mobile-audio-collapsed', !expandedAudio);
     dock.classList.toggle('mobile-audio-ready', !audio.hidden);
     if (observedAudio !== dock && typeof ResizeObserver !== 'undefined') {
@@ -177,7 +181,11 @@
     if (event.shiftKey && (document.activeElement === first || !panel.contains(document.activeElement))) { event.preventDefault(); last.focus(); }
     else if (!event.shiftKey && (document.activeElement === last || !panel.contains(document.activeElement))) { event.preventDefault(); first.focus(); }
   });
-  document.addEventListener('focusin', refresh);
+  document.addEventListener('focusin', event => {
+    const target = event.target || document.activeElement;
+    if (editable(target) && !document.getElementById('audio-dock')?.contains(target)) expandedAudio = false;
+    refresh();
+  });
   document.addEventListener('focusout', () => { refresh(); setTimeout(refresh, 180); });
   window.addEventListener('resize', refresh, {passive: true});
   window.addEventListener('orientationchange', refresh, {passive: true});

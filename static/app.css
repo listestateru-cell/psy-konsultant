@@ -17,6 +17,22 @@ html{scroll-padding-bottom:180px}body{background:var(--bg);letter-spacing:-.012e
 .audio-progress-summary[hidden]{display:none}
 .audio-position{margin:2px 4px;font-size:13px;font-variant-numeric:tabular-nums;line-height:1.4;color:var(--ink)}
 .audio-position[hidden],.review-sync-backup[hidden]{display:none}
+/* The same title bar opens the full player on phones and on desktop. */
+.mobile-audio-toggle{
+  display:flex;align-items:center;gap:8px;width:100%;min-height:44px;padding:0 8px;
+  border:0;border-radius:12px;background:transparent;color:var(--ink);font:inherit;line-height:1.3;
+  text-align:left;cursor:pointer;box-sizing:border-box;
+}
+.mobile-audio-toggle>span{flex:1;min-width:0;font-size:14px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.mobile-audio-toggle .mobile-audio-chevron{display:block;flex:0 0 18px;width:18px;height:18px;color:var(--acc);transition:transform 180ms ease}
+.mobile-audio-toggle[aria-expanded=true] .mobile-audio-chevron{transform:rotate(180deg)}
+.mobile-audio-toggle:active{background:var(--soft)}
+.audio-dock.mobile-audio-collapsed{min-height:46px;padding:0 8px;border-radius:16px}
+.audio-dock.mobile-audio-collapsed>:not(.mobile-audio-toggle){display:none!important}
+body.has-audio main{padding-bottom:calc(var(--audio-space,48px) + 24px)}
+body.has-audio .toasts{bottom:calc(var(--audio-space,48px) + 12px)}
+body.has-audio .tutor{bottom:var(--audio-space,48px);max-height:calc(90dvh - var(--audio-space,48px))}
+@media(hover:hover){.mobile-audio-toggle:hover{background:var(--soft)}}
 .review-sync-backup{margin-top:18px;padding-top:8px;border-top:1px solid var(--line);color:var(--mute);font-size:13px}
 .review-sync-backup summary{min-height:44px;display:list-item;align-content:center;cursor:pointer;line-height:1.4;padding:8px 4px}
 .review-sync-backup p{line-height:1.5;margin:4px 0 10px}
