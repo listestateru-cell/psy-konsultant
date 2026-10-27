@@ -18,6 +18,9 @@
       return Object.fromEntries(Object.keys(item).sort().map(key => [key, item[key]]));
     });
   }
+  function scope(session) {
+    return session ? fingerprint([session.mode, session.subject || 0, Number(session.terms) || 0, session.lecture || 0]) : null;
+  }
   function create(options) {
     const storage = options.storage, outboxKey = options.key + '.outbox', backupKey = options.key + '.backup';
     let generation = options.generation, revision = 0, ready = false, applying = false;
@@ -28,7 +31,7 @@
     const hasBackup = () => { const saved = read(backupKey); return saved?.generation === generation && !!saved.session; };
     const state = value => { status = value; options.status?.(value, hasBackup()); };
     const currentState = () => state(deferred ? 'conflict' : pending || flight ? 'saving' : 'saved');
-    const persist = () => put(outboxKey, pending && { generation, revision, session: pending.session });
+    const persist = () => put(outboxKey, pending && { generation, revision, baseline, session: pending.session });
     function rememberConflict(session) { if (session) put(backupKey, { generation, session }); }
     function apply(snapshot) {
       if (snapshot.generation !== generation) { options.reset?.(snapshot.generation); return false; }
@@ -69,7 +72,8 @@
           baseline = fingerprint(null); pending = null; changed(candidate?.session || local);
           await flush(); return true;
         }
-        if (candidate && saved?.revision === snapshot.revision) {
+        if (candidate && saved?.revision === snapshot.revision && saved.baseline === fingerprint(clean(snapshot.session)) &&
+            (!candidate.session || scope(candidate.session) === scope(snapshot.session))) {
           baseline = fingerprint(clean(snapshot.session)); pending = null; changed(candidate.session);
           if (pending) await flush(); else apply(snapshot);
           return true;

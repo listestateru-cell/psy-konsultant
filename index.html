@@ -157,7 +157,7 @@ document.querySelectorAll('#desktop-nav button').forEach(b=>b.onclick=()=>tab(b.
 async function tab(t){const nav=await tkBeforeNavigation();if(nav==null)return;if(typeof cardVoiceLeave==='function')cardVoiceLeave();if(typeof WAITING_LECTURE!=='undefined')WAITING_LECTURE=null;if(typeof learnLeave==='function')learnLeave();document.querySelectorAll('#desktop-nav button').forEach(b=>b.classList.toggle('on',b.dataset.t==t));
  ['home','study','glossary','stats','errors','dojo','practice'].forEach(x=>$('v-'+x).hidden=x!=t);
  if(t=='dojo')loadDojo(); if(t=='practice')loadPractice(undefined,nav); if(t=='home')loadHome(); if(t=='stats')loadStats(); if(t=='errors')loadErrors(); if(t=='glossary')loadGlossary();
- if(t=='study'&&!S)studyMenu();if(typeof window!=='undefined'){window.FukushuMobile?.sync?.(t);window.FukushuConnection?.setRoute?.(t)}; window.scrollTo(0,0);}
+ if(t=='study'&&!S&&!reviewRestore())studyMenu();if(typeof window!=='undefined'){window.FukushuMobile?.sync?.(t);window.FukushuConnection?.setRoute?.(t)}; window.scrollTo(0,0);}
 window.FukushuNavigate=t=>tab(t);
 
 // ---------- главная: дисциплины ----------
@@ -212,6 +212,7 @@ function filterLectures(value){const query=value.trim().toLocaleLowerCase('ru'),
 async function materialRead(id,subject,button){button.disabled=true;try{await post('audio',{op:'read_material',lecture_id:id,generation:studyGeneration()});await startSession('lecture',subject,0,id)}catch(err){button.disabled=false;button.textContent=String(err)}}
 async function startSession(mode,subject,terms,lecture,seen=[]){
  if(!await reviewBeforeSession())return;
+ if(mode==='lecture'&&lecture&&!seen.length&&reviewResumeLecture(lecture))return;
  if(await tabOnly('study')==null)return; learnLeave();$('v-study').innerHTML='<div class="box center loading-line" data-fx-busy="true" data-fx-state="searching">Загружаю…</div>';
  const r=await get(`session?mode=${mode}&subject=${subject||''}&terms=${terms||0}&lecture=${lecture||''}`);
  if(typeof studyGeneration==='function'&&(r.generation??0)<studyGeneration())return;
@@ -254,6 +255,7 @@ function setOut(html,opts,q,details=''){const s=S,p=s.pending;$('out').innerHTML
  document.querySelectorAll('#out [data-k]').forEach(b=>b.onclick=()=>{if(S===s&&s.pending===p)fin(...opts[+b.dataset.k].slice(1))});}
 function lock(){document.querySelectorAll('#act button,#act textarea').forEach(x=>x.disabled=true)}
 function reviewKey(){return 'fukushu.review.session.'+KEY}
+function reviewResumeLecture(id){const s=S||reviewRead();if(!s||!['lecture','due'].includes(s.mode)||!s.cards?.length)return false;const lecture=Number(id);if(!Number.isSafeInteger(lecture)||lecture<1||!s.cards.every(c=>Number(c.lecture_id)===lecture))return false;return reviewRestore()}
 let REVIEW_SYNC=null,REVIEW_SYNC_TIMER=null,REVIEW_SYNC_TYPED=0;
 function reviewPersist(s=S){if(!s||S!==s)return;try{localStorage.setItem(reviewKey(),JSON.stringify({version:1,session:s},(k,v)=>k==='_flight'?undefined:v));s.storageError=false}catch(_){s.storageError=true}if(REVIEW_SYNC){REVIEW_SYNC.changed(s);if(s.pending)REVIEW_SYNC.flush()}}
 function reviewClear(){try{localStorage.removeItem(reviewKey())}catch(_){}if(typeof REVIEW_SYNC!=='undefined'&&REVIEW_SYNC){REVIEW_SYNC.changed(null);REVIEW_SYNC.flush()}}
@@ -752,10 +754,11 @@ async function appStart(){
 let overview;try{overview=await get('overview');if(!studyApplyGeneration(overview.generation??0))throw Error('stale progress')}catch(_){$('v-home').innerHTML='<div class="box"><p>Не получилось загрузить актуальный прогресс. Проверь соединение и попробуй ещё раз.</p><button class="btn pri" onclick="appStart()">Повторить</button></div>';return}
 if(typeof reviewSyncStart==='function')await reviewSyncStart();
 const T0=window.FukushuConnection?.route() ?? location.hash.slice(1);
-if((!T0||T0==='study')&&reviewRestore()){loadHome(overview)}
+const resumeRoute=!T0||T0==='study'||T0==='home'&&(navigator.standalone===true||window.matchMedia?.('(display-mode: standalone)').matches);
+if(resumeRoute&&reviewRestore()){loadHome(overview)}
 else if(['study','glossary','stats','errors','dojo','practice'].includes(T0)){loadHome(overview);tab(T0)}
 else if(/^task-[0-9]+$/.test(T0)){loadHome(overview);openTask(+T0.slice(5))}else if(/^learn-[0-9]+$/.test(T0)){loadHome(overview);openLesson(+T0.slice(6))}else if(/^listen-[0-9]+$/.test(T0)){loadHome(overview);openLesson(+T0.slice(7))}else loadHome(overview);
-const resumedReview=reviewRead();audioRestoreShared(!T0||T0==='study'?resumedReview:null,/^listen-[0-9]+$/.test(T0)?+T0.slice(7):0);
+const resumedReview=reviewRead();audioRestoreShared(resumeRoute?resumedReview:null,/^listen-[0-9]+$/.test(T0)?+T0.slice(7):0);
 }
 if(window.FukushuConnection)window.FukushuConnection.start(appStart);else appStart();
 </script><script defer src="./static/telegram-web-app.js?v=20261024"></script><script defer src="./static/mobile.js?v=20261024"></script><script type="module" src="./static/effects.js?v=20261024"></script></body></html>
