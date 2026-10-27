@@ -751,7 +751,7 @@ const T0=window.FukushuConnection?.route() ?? location.hash.slice(1);
 if((!T0||T0==='study')&&reviewRestore()){loadHome(overview)}
 else if(['study','glossary','stats','errors','dojo','practice'].includes(T0)){loadHome(overview);tab(T0)}
 else if(/^task-[0-9]+$/.test(T0)){loadHome(overview);openTask(+T0.slice(5))}else if(/^learn-[0-9]+$/.test(T0)){loadHome(overview);openLesson(+T0.slice(6))}else if(/^listen-[0-9]+$/.test(T0)){loadHome(overview);openLesson(+T0.slice(7))}else loadHome(overview);
-audioRestore(/^listen-[0-9]+$/.test(T0)?+T0.slice(7):0);
+const resumedReview=reviewRead();audioRestore(/^listen-[0-9]+$/.test(T0)?+T0.slice(7):(!T0||T0==='study')&&resumedReview?.mode==='lecture'&&resumedReview.availability?.timeline_status==='ready'?resumedReview.lecture:0);
 }
 if(window.FukushuConnection)window.FukushuConnection.start(appStart);else appStart();
 </script><script defer src="./static/telegram-web-app.js?v=20261024"></script><script defer src="./static/mobile.js?v=20261024"></script><script type="module" src="./static/effects.js?v=20261024"></script></body></html>
