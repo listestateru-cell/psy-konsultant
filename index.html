@@ -172,7 +172,7 @@ function subjectVisual(name){const label=subjectName(name).toLocaleLowerCase('ru
  if(label==='допматериалы')return{tone:'materials',icon:homeIcon('<path d="M4 9V6h9l3 4h12v17H4V9Zm0 6h24M10 20h12"/>')};
  return{tone:'default',icon:homeIcon('<path d="m3 12 13-7 13 7-13 7-13-7Zm6 4v7c4 4 10 4 14 0v-7m6-4v11"/>')};}
 function homeIsInstalled(){return !!(window.FukushuConnection?.installed||navigator.standalone===true||window.matchMedia?.('(display-mode: standalone)').matches)}
-function subjectTileLabel(name){if(name==='Психофизиология')return 'Психо<wbr>физиология';if(name==='Психологическое консультирование')return 'Консультирование';return e(name)}
+function subjectTileLabel(name){if(name==='Психофизиология')return 'Психо<wbr>физиология';if(name==='Психологическое консультирование')return 'Консульти<wbr>рование';return e(name)}
 function homeContinue(){if(!reviewRestore())pickLecture(0)}
 let HOME_SUBJECT=null,HOME_SUBJECT_TRIGGER=null;
 function homeSubjectClose(){const dialog=$('subject-dialog');if(dialog?.open)dialog.close()}
