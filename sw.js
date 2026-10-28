@@ -2,7 +2,7 @@
 'use strict';
 const ROOT_URL = new URL('./', self.registration.scope);
 const CACHE_PREFIX = 'fukushu-shell-' + encodeURIComponent(ROOT_URL.pathname) + '-';
-const CACHE_NAME = CACHE_PREFIX + '3634e3cf569f80c48ecc';
+const CACHE_NAME = CACHE_PREFIX + '51a58c1b07a4ca528f12';
 const PRECACHE = ["./", "./manifest.webmanifest", "./static/THIRD_PARTY_NOTICES.txt", "./static/app.css", "./static/chunks/chunk-3P3NBJ43.js", "./static/chunks/chunk-3P3NBJ43.js.LEGAL.txt", "./static/connection.js", "./static/effects-image.js", "./static/effects-image.js.LEGAL.txt", "./static/effects.css", "./static/effects.js", "./static/effects.js.LEGAL.txt", "./static/icons/icon-180.png", "./static/icons/icon-192.png", "./static/icons/icon-512.png", "./static/icons/icon.svg", "./static/install.css", "./static/mobile.css", "./static/mobile.js", "./static/study-sync.js", "./static/telegram-web-app.js"];
 const SHELL_URL = ROOT_URL.href;
 const ASSET_URLS = new Set(PRECACHE.filter(path => path !== './').map(path => new URL(path, ROOT_URL).href));
