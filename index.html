@@ -218,7 +218,7 @@ const LECTURE_LIBRARY={subject:0,query:'',scroll:0,focus:0};
 function lectureRoute(route){if(window.FukushuConnection)window.FukushuConnection.setRoute(route);else history.replaceState(null,'',location.pathname+location.search+'#'+route)}
 function lectureAvailable(l){return l.cards||l.has_explanation||l.has_audio===true}
 function lectureOrder(a,b){const numbered=/(?:лекция|тема)\s*\d+/iu;return Number(numbered.test(b.title||''))-Number(numbered.test(a.title||''))||String(a.title||'').localeCompare(String(b.title||''),'ru',{numeric:true,sensitivity:'base'})||a.id-b.id}
-function lectureListBack(subject){return pickLecture(subject,true)}
+async function lectureListBack(subject){if(typeof audioSave==='function')await audioSave();return pickLecture(subject,true)}
 async function pickLecture(subject=0,restore=false){
  subject=Number(subject)||0;if(!await reviewBeforeSession())return;const nav=await tabOnly('study');if(nav==null)return;learnLeave();
  if(!restore||LECTURE_LIBRARY.subject!==subject)Object.assign(LECTURE_LIBRARY,{subject,query:'',scroll:0,focus:0});
@@ -511,7 +511,7 @@ function audioDebugDraw(a=AU){const panel=$('audio-debug');if(!panel)return;cons
 function audioDraw(){const dock=$('audio-dock');if(!dock)return;dock.hidden=!AU;if(!AU){audioLayout();return}const a=AU;
  audioProgressDraw(a);audioDebugDraw(a);
  $('audio-title').textContent=a.title||'Аудиолекция';$('audio-speed').value=String(a.playback_rate||1);$('audio-speed').disabled=!a.ready;
- audioElement().hidden=!a.ready;$('audio-questions').disabled=false;$('audio-sections').disabled=false;$('audio-retry').hidden=!a.error&&!a.pending&&!a.stalled;$('audio-retry').textContent=a.stalled?'Перезапустить звук':'Попробовать ещё раз';
+ audioElement().hidden=!a.ready;$('audio-questions').disabled=false;$('audio-sections').disabled=false;$('audio-retry').hidden=!a.error&&!a.pending&&!a.stalled&&!a.playError;$('audio-retry').textContent=a.stalled?'Перезапустить звук':a.ready&&a.playError?'Включить звук':'Попробовать ещё раз';
  $('audio-resume').hidden=!a.pausedForVoice||!a.ready;$('audio-resume').disabled=audioVoiceActive();
  const status=$('audio-status');status.classList.toggle('error',!!a.error||!!a.saveError);status.textContent=a.error||a.saveError||a.notice||(a.loading?'Открываю аудиозапись…':a.pausedForVoice?'Лекция на паузе для голосового ответа. Продолжи, когда закончишь.':'Место прослушивания сохраняется. Можно перейти к вопросам или практике.');audioLayout()}
 function audioTrackReset(a=AU){if(!a)return;const el=audioElement();a.sample={position:el.currentTime,at:Date.now(),rate:el.playbackRate||1,playing:!el.paused&&!el.seeking}}
@@ -557,7 +557,7 @@ function audioRecoverPlay(){const a=AU,el=audioElement();if(!a)return Promise.re
  try{a.url=API+'audio_stream?lecture_id='+a.lecture_id+'&media_id='+encodeURIComponent(a.media_id);el.src=a.url+'&restart='+Date.now().toString(36)+'-'+a.recoverySerial;el.load();playback=el.play()}catch(error){return Promise.resolve(failed(error))}
  audioRemember(a.lecture_id);audioDraw();audioTraceTimeout(true);return Promise.resolve(playback).then(()=>true,failed)}
 function audioPlaybackMoved(a=AU){if(AU!==a||!a?.stalled||a.restoring)return;const el=audioElement();if(!el.paused&&!el.seeking&&Number.isFinite(el.currentTime)&&Math.abs(el.currentTime-a.stalledAt)>.05){a.stalled=false;a.stalledAt=null;if(a.notice==='Звук не запускается. Нажми «Перезапустить звук».')a.notice='';audioDraw()}}
-async function audioOpen(id,play=true,fresh=null){id=Number(id);if(!Number.isInteger(id)||id<1)return;if(!fresh&&AU?.lecture_id===id&&AU.ready){await audioSync();if(play)await audioPlay();return}const request=++AUDIO_REQUEST,restoreDisabled=!!(fresh&&AU?.restoreDisabled),pausedForVoice=!!(fresh&&AU?.pausedForVoice);if(fresh){if(AU){audioSaveCapture(AU);audioPendingStore(AU)}}else audioSave();audioDetach();const a=AU={lecture_id:id,title:'Открываю аудиолекцию…',loading:true,ready:false,shouldPlay:play,playback_rate:1,error:'',notice:'',restoreDisabled,pausedForVoice};audioDraw();
+async function audioOpen(id,play=true,fresh=null){id=Number(id);if(!Number.isInteger(id)||id<1)return;if(!fresh&&AU?.lecture_id===id&&AU.ready){const playing=play?(AU.stalled?audioRecoverPlay():audioPlay()):Promise.resolve();await Promise.all([playing,audioSync()]);return}const request=++AUDIO_REQUEST,restoreDisabled=!!(fresh&&AU?.restoreDisabled),pausedForVoice=!!(fresh&&AU?.pausedForVoice);if(fresh){if(AU){audioSaveCapture(AU);audioPendingStore(AU)}}else audioSave();audioDetach();const a=AU={lecture_id:id,title:'Открываю аудиолекцию…',loading:true,ready:false,shouldPlay:play,playback_rate:1,error:'',notice:'',restoreDisabled,pausedForVoice};audioDraw();
  try{let info=fresh||await get('audio?lecture_id='+id);if(AUDIO_REQUEST!==request||AU!==a)return;
   if(info.state==='needs_conversion'){a.title=info.title;a.notice='Готовлю запись для плеера. Пока можно проходить вопросы.';audioDraw();info=await post('audio',{op:'prepare',lecture_id:id})}
   while(info.pending){if(AUDIO_REQUEST!==request||AU!==a)return;a.title=info.title||a.title;a.notice=info.notice||'Готовлю запись для плеера. Пока можно проходить вопросы.';audioDraw();await new Promise(resolve=>setTimeout(resolve,1500));if(AUDIO_REQUEST!==request||AU!==a)return;info=await post('audio',{op:'poll',job:info.job})}

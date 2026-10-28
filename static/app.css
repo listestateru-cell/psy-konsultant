@@ -31,7 +31,11 @@ html{scroll-padding-bottom:180px}body{background:var(--bg);letter-spacing:-.012e
 .mobile-audio-toggle[aria-expanded=true] .mobile-audio-chevron{transform:rotate(180deg)}
 .mobile-audio-toggle:active{background:var(--soft)}
 .audio-dock.mobile-audio-collapsed{min-height:46px;padding:0 8px;border-radius:16px}
-.audio-dock.mobile-audio-collapsed>:not(.mobile-audio-toggle){display:none!important}
+.audio-dock.mobile-audio-collapsed>:not(.mobile-audio-toggle):not(.audio-actions){display:none!important}
+.audio-dock.mobile-audio-collapsed>.audio-actions{display:contents!important}
+.audio-dock.mobile-audio-collapsed>.audio-actions>:not(#audio-retry){display:none!important}
+.audio-dock.mobile-audio-collapsed #audio-retry[hidden]{display:none!important}
+.audio-dock.mobile-audio-collapsed #audio-retry:not([hidden]){display:block;width:100%;min-height:44px;margin:0 0 6px;box-sizing:border-box}
 body.has-audio main{padding-bottom:calc(var(--audio-space,48px) + 24px)}
 body.has-audio .toasts{bottom:calc(var(--audio-space,48px) + 12px)}
 body.has-audio .tutor{bottom:var(--audio-space,48px);max-height:calc(90dvh - var(--audio-space,48px))}
