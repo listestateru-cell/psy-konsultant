@@ -395,13 +395,13 @@ async function loadErrors(subject){
  $('es').onchange=()=>loadErrors($('es').value);
  if($('cram'))$('cram').onclick=()=>startSession('errors',subject||0,0);}
 
-refreshWho();
 function toast(t,cls){const d=document.createElement('div');d.className='toast '+(cls||'');d.textContent=t;$('toasts').appendChild(d);setTimeout(()=>d.remove(),cls=='coin'?2200:4500)}
-let WHO={};
+let WHO={},WHO_FLIGHT=null;
 function setWho(mon){if(mon!=null)WHO.mon=mon;$('who').innerHTML=[e(WHO.name||''),WHO.belt,`<span class="coins">${WHO.mon??0} 🪙</span>`,WHO.streak!=null?'🔥 '+WHO.streak:''].filter(Boolean).join(' · ')}
 function whoFrom(g){const op=new Set(g.opened||[]);return {belt:op.has('mastery')?g.rank.emoji+' '+g.rank.name:'',mon:g.mon,streak:op.has('streak')?g.streak:null}}
-async function refreshWho(){try{const [s,g]=await Promise.all([get('stats'),get('game')]);WHO={name:s.name,...whoFrom(g)};setWho()}
- catch(_){document.body.innerHTML='<main><div class="box center">Ссылка недействительна. Возьми свежую в боте: кнопка «🌐 Веб-версия».</div></main>'}}
+// Профиль дополняет экран: его временная ошибка не должна удалять занятие или форму входа.
+function refreshWho(){if(WHO_FLIGHT)return WHO_FLIGHT;WHO_FLIGHT=(async()=>{try{const [s,g]=await Promise.all([get('stats'),get('game')]);WHO={name:s.name,...whoFrom(g)};setWho()}
+ catch(_){}finally{WHO_FLIGHT=null}})();return WHO_FLIGHT}
 const INTRO=`<div class="box intro" id="intro"><h2>Твой сад</h2><ul style="padding-left:18px;margin:0">
  <li>🌱 <b>Дерево растёт, пока ты учишься.</b> Каждый ответ на карточку — полив: +1 к росту. Верный ответ в тесте или ответ своими словами — ещё +1.</li>
  <li>🪙 <b>За ответы приходят монеты.</b> Для начала их хватит на росток сакуры: купи его и посади.</li>
@@ -783,6 +783,7 @@ async function homeTasks(){try{const T=(await get('tasks')).tasks,n=T.filter(t=>
  el.innerHTML=`<div class="box" style="padding:12px 14px;margin-bottom:14px;display:flex;gap:12px;align-items:center;flex-wrap:wrap"><div style="flex:1;min-width:200px"><b>📝 Практика</b><br><small class="hint">${n?`🔴 Не сделано заданий из лекций: ${n} из ${T.length}`:`✅ Все ${T.length} заданий сделаны`}</small></div><button class="btn sm${n?' pri':''}" onclick="tab('practice')" style="flex:0 1 160px">Открыть</button></div>`}catch(_){}}
 async function appStart(){
 let overview;try{overview=await get('overview');if(!studyApplyGeneration(overview.generation??0))throw Error('stale progress')}catch(_){$('v-home').innerHTML='<div class="box"><p>Не получилось загрузить актуальный прогресс. Проверь соединение и попробуй ещё раз.</p><button class="btn pri" onclick="appStart()">Повторить</button></div>';return}
+refreshWho();
 if(typeof reviewSyncStart==='function')await reviewSyncStart();
 const T0=window.FukushuConnection?.route() ?? location.hash.slice(1);
 const resumeRoute=!T0||T0==='study'||T0==='home'&&(navigator.standalone===true||window.matchMedia?.('(display-mode: standalone)').matches);
