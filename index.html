@@ -194,10 +194,11 @@ async function loadHome(initial=null){
  d.ondragover=ev=>{ev.preventDefault();d.classList.add('on')}; d.ondragleave=()=>d.classList.remove('on');
  d.ondrop=ev=>{ev.preventDefault();d.classList.remove('on');ev.dataTransfer.files[0]&&upload(ev.dataTransfer.files[0])};homeTree();homeTasks();}
 async function upload(file){
- $('upres').textContent=`Загружаю «${file.name}» и определяю дисциплину… это до минуты.`;try{window.FukushuFX?.loading?.('#drop',true,'connecting')}catch(_){}
+ $('upres').textContent=`Загружаю «${file.name}»…`;try{window.FukushuFX?.loading?.('#drop',true,'connecting')}catch(_){}
  try{const r=await fetch(API+'upload',{method:'POST',headers:{'X-Filename':encodeURIComponent(file.name)},body:file}).then(r=>r.json());
   $('upres').textContent=r.status=='duplicate'?`Такой файл уже есть в базе (${r.where}), по нему уже можно заниматься.`
    :r.status=='rejected'?'Похоже, это не учебный материал по психологии, в базу не добавлен.'
+   :r.status=='queued'?'Файл сохранён и поставлен в очередь. Бот сообщит, когда материал будет готов.'
    :r.status=='placed'?`Готово: «${r.subject} / ${r.title}».${r.new_subject?' Это новая дисциплина.':''} Вопросы и словарь появятся через несколько минут, бот напишет.`
    :('Не получилось: '+(r.error||'ошибка'));}catch(_){$('upres').textContent='Не получилось загрузить файл.'}finally{try{window.FukushuFX?.loading?.('#drop',false)}catch(_){}}}
 

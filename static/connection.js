@@ -1,4 +1,4 @@
-/* The installed app stays on Pages; only authenticated requests follow the Mac. */
+/* The installed app stays on Pages; authenticated requests follow the backend. */
 (() => {
   'use strict';
   if (!window.FUKUSHU_HOSTED || window.FukushuConnection) return;
@@ -7,6 +7,7 @@
   const localPreview = ['localhost', '127.0.0.1'].includes(location.hostname);
   const accountKey = 'fukushu.launch.key.v1';
   const endpointKey = 'fukushu.endpoint.v1';
+  const serverOrigins = new Set(['https://fukushu.78-17-185-232.sslip.io']);
   const gatewayStatuses = new Set([502, 503, 504, 530]);
   const validKey = value => /^[A-Za-z0-9_-]{8,128}$/.test(value || '');
   const isInstalled = () => navigator.standalone === true || window.matchMedia?.('(display-mode: standalone)')?.matches === true;
@@ -27,8 +28,9 @@
     const url = new URL(value);
     if (url.username || url.password || url.search || url.hash || (url.pathname !== '/' && url.pathname !== '')) throw new Error('Неверный адрес подключения.');
     const quick = url.protocol === 'https:' && !url.port && /^[a-z0-9]+(?:-[a-z0-9]+)*\.trycloudflare\.com$/.test(url.hostname);
+    const server = serverOrigins.has(url.origin);
     const preview = localPreview && ['http:', 'https:'].includes(url.protocol) && ['localhost', '127.0.0.1'].includes(url.hostname);
-    if (!quick && !preview) throw new Error('Адрес подключения не подходит этому приложению.');
+    if (!quick && !server && !preview) throw new Error('Адрес подключения не подходит этому приложению.');
     return url.origin;
   }
 
@@ -61,7 +63,7 @@
     cover = document.createElement('section');
     cover.id = 'connection-cover';
     cover.setAttribute('aria-label', 'Подключение к Фукусю');
-    cover.innerHTML = '<div class="connection-card box"><div class="brand-mark" aria-hidden="true">復</div><h1>Фукусю</h1><p id="connection-status" role="status" aria-live="polite">Соединяюсь с Mac…</p><p class="hint" id="connection-detail">Лекции и твой прогресс хранятся на компьютере.</p><button class="btn pri" id="connection-retry" hidden>Подключиться ещё раз</button><form id="connection-login" hidden><label for="connection-link">Личная ссылка из бота</label><input id="connection-link" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Вставь ссылку «Веб-версия»"><button class="btn pri" type="submit">Открыть моё приложение</button></form>' +
+    cover.innerHTML = '<div class="connection-card box"><div class="brand-mark" aria-hidden="true">復</div><h1>Фукусю</h1><p id="connection-status" role="status" aria-live="polite">Подключаюсь к Фукусю…</p><p class="hint" id="connection-detail">Лекции и твой прогресс доступны после подключения.</p><button class="btn pri" id="connection-retry" hidden>Подключиться ещё раз</button><form id="connection-login" hidden><label for="connection-link">Личная ссылка из бота</label><input id="connection-link" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Вставь ссылку «Веб-версия»"><button class="btn pri" type="submit">Открыть моё приложение</button></form>' +
       (isInstalled() ? '' : '<button class="connection-install-link" data-install-open>Добавить на экран телефона</button>') + '</div>';
     document.body.append(cover);
     cover.querySelector('#connection-retry').onclick = () => connectAndBoot(true);
@@ -99,10 +101,20 @@
     note.hidden = false; note.querySelector('span').textContent = text; note.querySelector('button').hidden = !retry;
   }
 
+  function gatewayFailure(response) {
+    if (!gatewayStatuses.has(response.status)) return false;
+    // The API marks its own JSON replies, including AI timeouts and a busy
+    // speech queue. A proxy's JSON/HTML error has no such provenance. Do not
+    // consume or clone the body: the caller must receive its original stream.
+    const marker = response.headers?.get('X-Fukushu-Response');
+    const type = (response.headers?.get('Content-Type') || '').split(';', 1)[0].trim().toLowerCase();
+    return marker !== 'api-v1' || type !== 'application/json';
+  }
+
   function receivedApiResponse(response) {
-    // Application errors still prove the Mac answered. Clear only the stale
+    // Application errors still prove the server answered. Clear only the stale
     // connectivity note; startup, discovery and retry ownership stay unchanged.
-    if (response.status >= 100 && !gatewayStatuses.has(response.status) && note) note.hidden = true;
+    if (response.status >= 100 && !gatewayFailure(response) && note) note.hidden = true;
     return response;
   }
 
@@ -117,7 +129,7 @@
 
   async function discover() {
     const now = Date.now();
-    if (lastDiscovery && now - lastDiscovery < 15000) throw new Error('Подожди немного: ищу новый адрес компьютера.');
+    if (lastDiscovery && now - lastDiscovery < 15000) throw new Error('Подожди немного: проверяю адрес сервера.');
     lastDiscovery = now;
     const urls = localPreview ? [new URL('./url.txt', location.href).href] : [
       'https://api.github.com/repos/listestateru-cell/psy-konsultant/contents/url.txt',
@@ -131,13 +143,13 @@
         if (await alive(candidate)) return candidate;
       } catch (_) { /* Try the public fallback; no personal key is sent. */ }
     }
-    throw new Error('Компьютер пока не отвечает. Проверь, что Mac включён и подключён к интернету.');
+    throw new Error('Сервер Фукусю пока не отвечает. Проверь интернет и попробуй ещё раз.');
   }
 
   async function reconnect(force = false) {
     if (connecting) return connecting;
     connecting = (async () => {
-      if (started) connectionNote('Восстанавливаю связь с Mac…');
+      if (started) connectionNote('Восстанавливаю связь с Фукусю…');
       let candidate = '', cached = origin || read(endpointKey);
       if (!force && cached) {
         try { cached = normalizeEndpoint(cached); if (await alive(cached)) candidate = cached; } catch (_) {}
@@ -155,7 +167,7 @@
         window.FukushuFX?.refresh?.();
       }
       return origin;
-    })().catch(error => { if (started) connectionNote('Связи с Mac пока нет. Твои ответы остаются на экране.', true); throw error; }).finally(() => { connecting = null; });
+    })().catch(error => { if (started) connectionNote('Связи с Фукусю пока нет. Твои ответы остаются на экране.', true); throw error; }).finally(() => { connecting = null; });
     return connecting;
   }
 
@@ -192,8 +204,8 @@
     let failure;
     try {
       const response = receivedApiResponse(await nativeFetch(origin + url.pathname + url.search, {...options, mode: 'cors', credentials: 'omit', referrerPolicy: 'no-referrer'}));
-      if (!gatewayStatuses.has(response.status)) return response;
-      failure = new Error('Связь с компьютером прервалась.');
+      if (!gatewayFailure(response)) return response;
+      failure = new Error('Связь с Фукусю прервалась.');
     } catch (error) { if (options.signal?.aborted) throw error; failure = error; }
     try { await reconnect(true); }
     catch (_) { throw failure; }
@@ -207,13 +219,13 @@
 
   async function connectAndBoot(force = false) {
     clearTimeout(retryTimer);
-    startupMessage('Соединяюсь с Mac…');
+    startupMessage('Подключаюсь к Фукусю…');
     try {
       await reconnect(force);
       if (!started) { started = true; cover?.remove(); await boot(); }
     } catch (error) {
       if (!started) {
-        startupMessage(error.message || 'Не получилось подключиться к компьютеру.', true);
+        startupMessage(error.message || 'Не получилось подключиться к Фукусю.', true);
         retryCount++;
         retryTimer = setTimeout(() => { if (!document.hidden) connectAndBoot(true); }, Math.min(60000, 15000 * retryCount));
       }
@@ -237,7 +249,7 @@
     const installed = isInstalled();
     installDialog.innerHTML = '<div class="install-dialog-head"><h2 id="install-title">Фукусю на экране телефона</h2><button class="btn sm" id="install-close" aria-label="Закрыть инструкцию">✕</button></div>' +
       (installed ? '<p>Ты уже открыл Фукусю как приложение.</p>' : '<p>Значок будет открывать Фукусю по постоянному адресу, без адресной строки браузера.</p><button class="btn pri" id="install-native" hidden>Установить Фукусю</button><p><b>iPhone и iPad</b><br>Открой эту ссылку в Safari. Нажми «Поделиться» → «На экран “Домой”». Если есть переключатель «Открыть как веб-приложение», включи его.</p><p><b>Android</b><br>Открой эту ссылку в Chrome. В меню выбери «Установить приложение» или «Добавить на главный экран».</p>') +
-      '<p class="hint">Для лекций и проверки ответов Mac должен быть включён. При смене его адреса приложение найдёт подключение заново.</p>';
+      '<p class="hint">Для загрузки лекций и проверки ответов нужен интернет. Приложение само найдёт актуальный адрес сервера.</p>';
     document.body.append(installDialog);
     installDialog.querySelector('#install-close').onclick = closeInstall;
     installDialog.addEventListener('close', closeInstall);
