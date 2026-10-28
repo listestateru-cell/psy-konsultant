@@ -217,7 +217,7 @@ function studyMenu(){if(typeof WAITING_LECTURE!=='undefined')WAITING_LECTURE=nul
 const LECTURE_LIBRARY={subject:0,query:'',scroll:0,focus:0};
 function lectureRoute(route){if(window.FukushuConnection)window.FukushuConnection.setRoute(route);else history.replaceState(null,'',location.pathname+location.search+'#'+route)}
 function lectureAvailable(l){return l.cards||l.has_explanation||l.has_audio===true}
-function lectureOrder(a,b){return String(a.title||'').localeCompare(String(b.title||''),'ru',{numeric:true,sensitivity:'base'})||a.id-b.id}
+function lectureOrder(a,b){const numbered=/(?:лекция|тема)\s*\d+/iu;return Number(numbered.test(b.title||''))-Number(numbered.test(a.title||''))||String(a.title||'').localeCompare(String(b.title||''),'ru',{numeric:true,sensitivity:'base'})||a.id-b.id}
 function lectureListBack(subject){return pickLecture(subject,true)}
 async function pickLecture(subject=0,restore=false){
  subject=Number(subject)||0;if(!await reviewBeforeSession())return;const nav=await tabOnly('study');if(nav==null)return;learnLeave();
