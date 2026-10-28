@@ -7,10 +7,11 @@
 <meta name="robots" content="noindex">
 <meta name="referrer" content="no-referrer">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Фукусю">
+<meta name="apple-mobile-web-app-title" content="PSU Hope">
 <link rel="manifest" href="./manifest.webmanifest">
-<link rel="apple-touch-icon" href="./static/icons/icon-180.png">
-<title>Фукусю · Учиться и помнить</title>
+<link rel="apple-touch-icon" href="./static/icons/icon-180.png?v=psu-hope-20261028">
+<link rel="icon" type="image/png" sizes="192x192" href="./static/icons/icon-192.png?v=psu-hope-20261028">
+<title>PSU Hope · Психология надежды</title>
 <style>
 :root{--bg:#f6f4ef;--card:#fff;--ink:#1d1b18;--mute:#77716a;--line:#e6e1d8;--ok:#2f8f5b;--bad:#c4472f;--mid:#c9952b;--acc:#b8322a;--bar:#d9d3c7;--soft:#f0ece4}
 @media (prefers-color-scheme:dark){:root{--bg:#151412;--card:#1f1d1a;--ink:#eeeae3;--mute:#9b948a;--line:#2e2b27;--ok:#5cc28a;--bad:#ef7a62;--mid:#e0b04a;--acc:#e0574b;--bar:#3a3631;--soft:#272421}}
@@ -109,8 +110,8 @@ details summary{cursor:pointer;color:var(--mute)}
 .audio-dock{position:fixed;z-index:6;left:50%;bottom:0;transform:translateX(-50%);width:min(900px,100%);max-height:60dvh;overflow:auto;padding:12px 16px calc(12px + env(safe-area-inset-bottom));background:var(--card);border:1px solid var(--line);border-radius:16px 16px 0 0;box-shadow:0 -5px 24px rgba(0,0,0,.13)}
 .audio-dock[hidden]{display:none}.audio-head{display:flex;gap:12px;align-items:center}.audio-name{flex:1;min-width:0;overflow-wrap:anywhere}.audio-name small{display:block;color:var(--mute);font-size:12px}.audio-name b{font-size:15px;line-height:1.35;display:block}.audio-speed{display:flex;gap:6px;align-items:center;font-size:13px;flex:0 0 auto}.audio-speed select{width:auto;min-height:44px;padding:6px}.audio-close{min-height:44px;min-width:44px;padding:8px}.audio-dock audio{display:block;width:100%;height:48px;margin:8px 0;color-scheme:light dark}.audio-dock audio[hidden]{display:none}.audio-actions{display:flex;gap:8px;flex-wrap:wrap}.audio-actions .btn{flex:1 1 120px;min-height:44px}.audio-status{font-size:13px;color:var(--mute);margin:6px 0 0;overflow-wrap:anywhere}.audio-status.error{color:var(--bad)}.audio-dock button:focus-visible,.audio-dock select:focus-visible,.audio-dock audio:focus-visible{outline:3px solid var(--acc);outline-offset:3px}.audio-dock button:disabled{opacity:.55;cursor:default}body.has-audio main{padding-bottom:calc(var(--audio-space,220px) + 24px)}body.has-audio .toasts{bottom:calc(var(--audio-space,220px) + 12px)}body.has-audio .tutor{bottom:var(--audio-space,220px);max-height:calc(90dvh - var(--audio-space,220px))}.audio-lesson-action{margin:10px 0 14px}.audio-lesson-action .btn{min-height:44px}.audio-study-note{font-size:14px;color:var(--mute);margin:0 0 12px}
 @media(max-width:430px){.audio-dock{padding-left:12px;padding-right:12px}.audio-head{gap:8px}.audio-speed span{display:none}.audio-name b{font-size:14px}.audio-actions .btn{padding:9px 8px;font-size:14px}}
-</style><link rel="stylesheet" href="./static/app.css?v=20261024"><link rel="stylesheet" href="./static/effects.css?v=20261024"><link rel="stylesheet" href="./static/mobile.css?v=20261024"><link rel="stylesheet" href="./static/install.css?v=20261024"></head><body><main>
-<header class="app-header"><div class="brand"><div class="brand-mark" aria-hidden="true">復</div><div><h1>Фукусю <span>復習</span></h1><p>Учиться и помнить</p></div></div><div class="who" id="who"></div></header>
+</style><link rel="stylesheet" href="./static/app.css?v=psu-hope-20261028"><link rel="stylesheet" href="./static/effects.css?v=20261024"><link rel="stylesheet" href="./static/mobile.css?v=psu-hope-20261028"><link rel="stylesheet" href="./static/install.css?v=20261024"></head><body><main>
+<header class="app-header"><div class="brand"><div class="brand-mark" aria-hidden="true"><img class="brand-logo" src="./static/icons/icon-192.png?v=psu-hope-20261028" alt="" width="56" height="56"></div><div><h1>PSU Hope</h1><p>Психология надежды</p></div></div><div class="who" id="who"></div></header>
 <nav id="desktop-nav" aria-label="Разделы приложения"><button data-t="home" class="on">Главная</button><button data-t="study">Учить</button><button data-t="glossary">Словарь</button><button data-t="stats">Статистика</button><button data-t="errors">Ошибки</button><button data-t="practice">Практика</button><button data-t="dojo">Мой сад</button></nav>
 <section id="v-home"></section><section id="v-study" hidden></section><section id="v-glossary" hidden></section><section id="v-stats" hidden></section><section id="v-errors" hidden></section><section id="v-dojo" hidden></section><section id="v-practice" hidden></section>
 </main><div class="toasts" id="toasts"></div><div class="tutor" id="tutor" hidden></div>
@@ -132,7 +133,7 @@ details summary{cursor:pointer;color:var(--mute)}
 </nav>
 <div id="mobile-more" role="dialog" aria-modal="true" aria-labelledby="mobile-more-title" hidden><div class="mobile-more-backdrop" data-mobile-close></div><div id="mobile-more-panel" class="mobile-more-panel"><div class="mobile-more-heading"><h2 id="mobile-more-title">Ещё</h2><button id="mobile-more-close" data-mobile-close aria-label="Закрыть меню">✕</button></div><button data-mobile-tab="stats"><span>Статистика</span><small>Повторы и освоенные карточки</small></button><button data-mobile-tab="errors"><span>Ошибки</span><small>Вернуться к сложным вопросам</small></button><button data-mobile-tab="dojo"><span>Мой сад</span><small>Рост дерева и награды</small></button></div></div>
 <script>window.FUKUSHU_HOSTED=true;</script>
-<script src="./static/connection.js?v=20261024"></script>
+<script src="./static/connection.js?v=psu-hope-20261028"></script>
 <script src="./static/study-sync.js?v=20261027"></script>
 <script>
 const KEY=window.FukushuConnection?.key || location.pathname.split('/')[2], API=window.FukushuConnection?.apiBase() || '/api/'+KEY+'/';

@@ -3,6 +3,7 @@
   'use strict';
   if (!window.FUKUSHU_HOSTED || window.FukushuConnection) return;
   const nativeFetch = window.fetch.bind(window);
+  const brandIcon = new URL('icons/icon-192.png?v=psu-hope-20261028', document.currentScript?.src || new URL('static/connection.js', location.href)).href;
   const root = document.documentElement;
   const localPreview = ['localhost', '127.0.0.1'].includes(location.hostname);
   const accountKey = 'fukushu.launch.key.v1';
@@ -62,8 +63,8 @@
     if (cover?.isConnected) return cover;
     cover = document.createElement('section');
     cover.id = 'connection-cover';
-    cover.setAttribute('aria-label', 'Подключение к Фукусю');
-    cover.innerHTML = '<div class="connection-card box"><div class="brand-mark" aria-hidden="true">復</div><h1>Фукусю</h1><p id="connection-status" role="status" aria-live="polite">Подключаюсь к Фукусю…</p><p class="hint" id="connection-detail">Лекции и твой прогресс доступны после подключения.</p><button class="btn pri" id="connection-retry" hidden>Подключиться ещё раз</button><form id="connection-login" hidden><label for="connection-link">Личная ссылка из бота</label><input id="connection-link" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Вставь ссылку «Веб-версия»"><button class="btn pri" type="submit">Открыть моё приложение</button></form>' +
+    cover.setAttribute('aria-label', 'Подключение к PSU Hope');
+    cover.innerHTML = '<div class="connection-card box"><div class="brand-mark" aria-hidden="true"><img class="brand-logo" src="' + brandIcon + '" alt="" width="56" height="56"></div><h1>PSU Hope</h1><p id="connection-status" role="status" aria-live="polite">Подключаюсь к PSU Hope…</p><p class="hint" id="connection-detail">Лекции и твой прогресс доступны после подключения.</p><button class="btn pri" id="connection-retry" hidden>Подключиться ещё раз</button><form id="connection-login" hidden><label for="connection-link">Личная ссылка из бота</label><input id="connection-link" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Вставь ссылку «Веб-версия»"><button class="btn pri" type="submit">Открыть моё приложение</button></form>' +
       (isInstalled() ? '' : '<button class="connection-install-link" data-install-open>Добавить на экран телефона</button>') + '</div>';
     document.body.append(cover);
     cover.querySelector('#connection-retry').onclick = () => connectAndBoot(true);
@@ -143,13 +144,13 @@
         if (await alive(candidate)) return candidate;
       } catch (_) { /* Try the public fallback; no personal key is sent. */ }
     }
-    throw new Error('Сервер Фукусю пока не отвечает. Проверь интернет и попробуй ещё раз.');
+    throw new Error('Сервер PSU Hope пока не отвечает. Проверь интернет и попробуй ещё раз.');
   }
 
   async function reconnect(force = false) {
     if (connecting) return connecting;
     connecting = (async () => {
-      if (started) connectionNote('Восстанавливаю связь с Фукусю…');
+      if (started) connectionNote('Восстанавливаю связь с PSU Hope…');
       let candidate = '', cached = origin || read(endpointKey);
       if (!force && cached) {
         try { cached = normalizeEndpoint(cached); if (await alive(cached)) candidate = cached; } catch (_) {}
@@ -167,7 +168,7 @@
         window.FukushuFX?.refresh?.();
       }
       return origin;
-    })().catch(error => { if (started) connectionNote('Связи с Фукусю пока нет. Твои ответы остаются на экране.', true); throw error; }).finally(() => { connecting = null; });
+    })().catch(error => { if (started) connectionNote('Связи с PSU Hope пока нет. Твои ответы остаются на экране.', true); throw error; }).finally(() => { connecting = null; });
     return connecting;
   }
 
@@ -205,7 +206,7 @@
     try {
       const response = receivedApiResponse(await nativeFetch(origin + url.pathname + url.search, {...options, mode: 'cors', credentials: 'omit', referrerPolicy: 'no-referrer'}));
       if (!gatewayFailure(response)) return response;
-      failure = new Error('Связь с Фукусю прервалась.');
+      failure = new Error('Связь с PSU Hope прервалась.');
     } catch (error) { if (options.signal?.aborted) throw error; failure = error; }
     try { await reconnect(true); }
     catch (_) { throw failure; }
@@ -219,13 +220,13 @@
 
   async function connectAndBoot(force = false) {
     clearTimeout(retryTimer);
-    startupMessage('Подключаюсь к Фукусю…');
+    startupMessage('Подключаюсь к PSU Hope…');
     try {
       await reconnect(force);
       if (!started) { started = true; cover?.remove(); await boot(); }
     } catch (error) {
       if (!started) {
-        startupMessage(error.message || 'Не получилось подключиться к Фукусю.', true);
+        startupMessage(error.message || 'Не получилось подключиться к PSU Hope.', true);
         retryCount++;
         retryTimer = setTimeout(() => { if (!document.hidden) connectAndBoot(true); }, Math.min(60000, 15000 * retryCount));
       }
@@ -247,8 +248,8 @@
     installDialog = document.createElement('dialog'); installDialog.id = 'install-dialog';
     installDialog.setAttribute('aria-labelledby', 'install-title');
     const installed = isInstalled();
-    installDialog.innerHTML = '<div class="install-dialog-head"><h2 id="install-title">Фукусю на экране телефона</h2><button class="btn sm" id="install-close" aria-label="Закрыть инструкцию">✕</button></div>' +
-      (installed ? '<p>Ты уже открыл Фукусю как приложение.</p>' : '<p>Значок будет открывать Фукусю по постоянному адресу, без адресной строки браузера.</p><button class="btn pri" id="install-native" hidden>Установить Фукусю</button><p><b>iPhone и iPad</b><br>Открой эту ссылку в Safari. Нажми «Поделиться» → «На экран “Домой”». Если есть переключатель «Открыть как веб-приложение», включи его.</p><p><b>Android</b><br>Открой эту ссылку в Chrome. В меню выбери «Установить приложение» или «Добавить на главный экран».</p>') +
+    installDialog.innerHTML = '<div class="install-dialog-head"><h2 id="install-title">PSU Hope на экране телефона</h2><button class="btn sm" id="install-close" aria-label="Закрыть инструкцию">✕</button></div>' +
+      (installed ? '<p>Ты уже открыл PSU Hope как приложение.</p>' : '<p>Значок будет открывать PSU Hope по постоянному адресу, без адресной строки браузера.</p><button class="btn pri" id="install-native" hidden>Установить PSU Hope</button><p><b>iPhone и iPad</b><br>Открой эту ссылку в Safari. Нажми «Поделиться» → «На экран “Домой”». Если есть переключатель «Открыть как веб-приложение», включи его.</p><p><b>Android</b><br>Открой эту ссылку в Chrome. В меню выбери «Установить приложение» или «Добавить на главный экран».</p>') +
       '<p class="hint">Для загрузки лекций и проверки ответов нужен интернет. Приложение само найдёт актуальный адрес сервера.</p>';
     document.body.append(installDialog);
     installDialog.querySelector('#install-close').onclick = closeInstall;
@@ -277,7 +278,7 @@
       if (!validKey(key)) {
         startupMessage('Открой свою личную ссылку из бота.');
         cover.querySelector('#connection-login').hidden = false;
-        cover.querySelector('#connection-detail').textContent = 'При первом входе Фукусю запомнит твой профиль на этом устройстве.';
+        cover.querySelector('#connection-detail').textContent = 'При первом входе PSU Hope запомнит твой профиль на этом устройстве.';
       } else { setRoute(launchRoute()); connectAndBoot(); }
       if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
     },

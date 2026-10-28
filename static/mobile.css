@@ -21,6 +21,7 @@
   main > header { align-items: center; margin-bottom: 22px; gap: 8px; }
   main > header h1 { font-size: clamp(18px, 5vw, 23px); line-height: 1.25; letter-spacing: -.025em; }
   main > header .who { font-size: 13px; }
+  .brand-mark { width: 46px; height: 46px; flex-basis: 46px; border-radius: 12px; }
   #desktop-nav { display: none; }
   main > section { min-width: 0; }
   main h2 { font-size: 18px; line-height: 1.35; }
