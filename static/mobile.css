@@ -81,13 +81,15 @@
   .lecture-intro h2 { font-size: 28px; line-height: 1.25; }
   .lecture-search input { min-height: 50px; font-size: 16px; }
   .lecture-group-title { margin-top: 28px; font-size: 17px; }
-  .lecture-card { grid-template-columns: minmax(0, 1fr); gap: 16px; padding: 18px; border-radius: 20px; }
-  .lecture-card > div { min-width: 0; }
-  .lecture-card h3 { font-size: 19px; line-height: 1.4; margin-bottom: 7px; }
-  .lecture-card small { font-size: 13px; }
-  .lecture-actions { gap: 10px; }
-  .lecture-actions .btn { min-height: 46px; width: 100%; padding: 12px 10px; line-height: 1.4; font-size: 14px; }
-  .lecture-actions .lecture-primary { min-height: 50px; }
+  .lecture-list-item { min-height:68px; padding:16px; gap:12px; font-size:16px; }
+  .lecture-overview-head { margin-bottom:20px; }
+  .lecture-overview-head h2 { font-size:25px; line-height:1.35; }
+  .lecture-listen { display:block; padding:20px; }
+  .lecture-listen > .btn { width:100%; margin-top:18px; }
+  .lecture-overview-actions { grid-template-columns:minmax(0,1fr); gap:10px; margin-bottom:20px; }
+  .lecture-option { padding:16px 18px; min-height:86px; }
+  .lecture-progress dl { gap:12px; }
+  .lecture-progress dd { font-size:15px; }
   .term { padding: 18px 0; }
   .term p { margin-top: 7px; }
   .task { min-height: 58px; padding: 14px 0; gap: 12px; }
