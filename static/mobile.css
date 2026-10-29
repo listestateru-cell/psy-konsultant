@@ -135,7 +135,10 @@
   .audio-lesson-action .btn { width: 100%; font-size: 14px; }
   .learn-count { font-size: 14px; }
   .learn-feedback { padding: 16px; border-radius: 16px; }
-  .learn-footer { display: grid; grid-template-columns: minmax(0, 1fr); }
+  .learn-footer { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .learn-footer .learn-full { grid-column: 1 / -1; }
+  .learn-footer .learn-prev { grid-column: 1; }
+  .learn-footer .learn-next { grid-column: 2; }
   .tblwrap { overflow: visible; }
   table.tk, table.tk tbody, table.tk tr, table.tk td { display: block; width: 100%; min-width: 0; }
   table.tk tr:first-child { display: none; }
