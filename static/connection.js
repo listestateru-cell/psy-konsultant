@@ -15,7 +15,7 @@
   const read = name => { try { return localStorage.getItem(name); } catch (_) { return null; } };
   const write = (name, value) => { try { localStorage.setItem(name, value); } catch (_) {} };
   const fragment = location.hash.slice(1).split('~');
-  const isRoute = value => /^(?:home|study|glossary|stats|errors|dojo|practice|(?:learn|listen|task|lecture|lectures)-[0-9]+)$/.test(value || '');
+  const isRoute = value => /^(?:home|study|glossary|stats|errors|dojo|practice|search|(?:learn|listen|task|lecture|lectures)-[0-9]+)$/.test(value || '');
   const suppliedKey = validKey(fragment[0]) && (fragment.length > 1 || !isRoute(fragment[0])) ? fragment[0] : '';
   const key = suppliedKey || read(accountKey) || '';
   if (validKey(key)) write(accountKey, key);
@@ -55,7 +55,7 @@
   }
 
   function setRoute(route = '') {
-    const safe = /^(?:home|study|glossary|stats|errors|dojo|practice|(?:learn|listen|task|lecture|lectures)-[0-9]+)?$/.test(route) ? route : '';
+    const safe = /^(?:home|study|glossary|stats|errors|dojo|practice|search|(?:learn|listen|task|lecture|lectures)-[0-9]+)?$/.test(route) ? route : '';
     history.replaceState(null, '', location.pathname + location.search + '#' + key + (safe ? '~' + safe : ''));
   }
 

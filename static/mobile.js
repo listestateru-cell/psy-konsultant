@@ -5,7 +5,7 @@
   const root = document.documentElement;
   const body = document.body;
   const narrow = window.matchMedia('(max-width: 767px), (max-width: 1023px) and (pointer: coarse)');
-  const views = ['home', 'study', 'practice', 'glossary', 'stats', 'errors', 'dojo'];
+  const views = ['home', 'study', 'practice', 'glossary', 'stats', 'errors', 'dojo', 'search'];
   const nav = document.getElementById('mobile-nav');
   const more = document.getElementById('mobile-more');
   const moreToggle = document.getElementById('mobile-more-toggle');
@@ -34,7 +34,7 @@
       else button.removeAttribute('aria-current');
     });
     if (moreToggle) {
-      const secondary = ['stats', 'errors', 'dojo'].includes(active);
+      const secondary = ['stats', 'errors', 'dojo', 'search'].includes(active);
       moreToggle.classList.toggle('on', secondary);
       if (secondary) moreToggle.setAttribute('aria-current', 'page');
       else moreToggle.removeAttribute('aria-current');

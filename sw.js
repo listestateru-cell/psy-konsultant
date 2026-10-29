@@ -2,8 +2,8 @@
 'use strict';
 const ROOT_URL = new URL('./', self.registration.scope);
 const CACHE_PREFIX = 'fukushu-shell-' + encodeURIComponent(ROOT_URL.pathname) + '-';
-const CACHE_NAME = CACHE_PREFIX + '77a81bf69c6a5c5c11ad';
-const PRECACHE = ["./", "./manifest.webmanifest", "./static/THIRD_PARTY_NOTICES.txt", "./static/app.css", "./static/chunks/chunk-3P3NBJ43.js", "./static/chunks/chunk-3P3NBJ43.js.LEGAL.txt", "./static/connection.js", "./static/effects-image.js", "./static/effects-image.js.LEGAL.txt", "./static/effects.css", "./static/effects.js", "./static/effects.js.LEGAL.txt", "./static/icons/icon-180.png", "./static/icons/icon-192.png", "./static/icons/icon-512.png", "./static/icons/icon.svg", "./static/install.css", "./static/mobile.css", "./static/mobile.js", "./static/study-sync.js", "./static/telegram-web-app.js"];
+const CACHE_NAME = CACHE_PREFIX + '3114fbd7a55a9af096c5';
+const PRECACHE = ["./", "./manifest.webmanifest", "./static/THIRD_PARTY_NOTICES.txt", "./static/app.css", "./static/chunks/chunk-3P3NBJ43.js", "./static/chunks/chunk-3P3NBJ43.js.LEGAL.txt", "./static/connection.js", "./static/effects-image.js", "./static/effects-image.js.LEGAL.txt", "./static/effects.css", "./static/effects.js", "./static/effects.js.LEGAL.txt", "./static/icons/icon-180.png", "./static/icons/icon-192.png", "./static/icons/icon-512.png", "./static/icons/icon.svg", "./static/install.css", "./static/lecture-search.css", "./static/lecture-search.js", "./static/mobile.css", "./static/mobile.js", "./static/study-sync.js", "./static/telegram-web-app.js"];
 const SHELL_URL = ROOT_URL.href;
 const ASSET_URLS = new Set(PRECACHE.filter(path => path !== './').map(path => new URL(path, ROOT_URL).href));
 
