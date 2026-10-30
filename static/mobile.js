@@ -19,7 +19,7 @@
 
   const icon = (path, extra = '') => `<svg ${extra} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${path}</svg>`;
   const chevron = icon('<path d="m7 10 5 5 5-5"/>', 'class="mobile-audio-chevron"');
-  const editable = el => !!el && (el.matches('textarea,input:not([type=checkbox]):not([type=radio]):not([type=button]):not([type=submit]),[contenteditable=true]'));
+  const editable = el => !!el && !el.readOnly && !el.disabled && (el.matches('textarea,input:not([type=checkbox]):not([type=radio]):not([type=button]):not([type=submit]),[contenteditable=true]'));
   const visibleView = () => views.find(name => {
     const element = document.getElementById(`v-${name}`);
     return element && !element.hidden;
@@ -90,7 +90,7 @@
       toggle.className = 'mobile-audio-toggle';
       toggle.setAttribute('aria-label', 'Показать настройки аудиолекции');
       toggle.innerHTML = '<span></span>' + chevron;
-      toggle.setAttribute('aria-controls', 'lecture-audio audio-position audio-learning-progress audio-questions audio-sections audio-speed audio-status');
+      toggle.setAttribute('aria-controls', 'lecture-audio search-reading-slot audio-position audio-learning-progress audio-questions audio-sections audio-speed audio-status');
       dock.prepend(toggle);
       toggle.addEventListener('click', () => {
         toggle.focus({preventScroll: true});
@@ -226,6 +226,10 @@
       telegramInsets();
     }
   } catch (_) { /* Plain web and older Telegram versions use CSS safe areas. */ }
-  window.FukushuMobile = {refresh, sync, closeMore};
+  function setAudioExpanded(value) {
+    expandedAudio = !!value;
+    refresh();
+  }
+  window.FukushuMobile = {refresh, sync, closeMore, setAudioExpanded};
   refresh();
 })();
