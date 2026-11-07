@@ -236,16 +236,19 @@
   window.FukushuMobile = {refresh, sync, closeMore, setAudioExpanded};
   refresh();
   // Existing direct pages can receive this optional UI without restarting an import.
-  if (enhancementSource && !document.querySelector('script[src*="/slide-away.js"]')) {
-    const asset = name => new URL(name + '?v=slide-away-20261107', enhancementSource).href;
-    if (!document.querySelector('link[href*="/slide-away.css"]')) {
+  if (enhancementSource) for (const [name, version] of [
+    ['slide-away', 'slide-away-20261107'], ['bloom-garden', 'bloom-20261107']
+  ]) {
+    if (document.querySelector(`script[src*="/${name}.js"]`)) continue;
+    const asset = suffix => new URL(`${name}.${suffix}?v=${version}`, enhancementSource).href;
+    if (!document.querySelector(`link[href*="/${name}.css"]`)) {
       const style = document.createElement('link');
       style.rel = 'stylesheet';
-      style.href = asset('slide-away.css');
+      style.href = asset('css');
       document.head.append(style);
     }
     const controller = document.createElement('script');
-    controller.src = asset('slide-away.js');
+    controller.src = asset('js');
     controller.defer = true;
     document.body.append(controller);
   }
