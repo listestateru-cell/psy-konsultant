@@ -9,3 +9,7 @@
 @keyframes bloom-stem{from{stroke-dashoffset:1;opacity:.2}to{stroke-dashoffset:0;opacity:1}}
 @keyframes bloom-open{from{transform:scale(.35);opacity:0}to{transform:scale(1);opacity:1}}
 @media(prefers-reduced-motion:reduce){.bloom-tree *{animation:none!important;transition:none!important}}
+/* Generated canvas bloom painted over the SVG; the SVG keeps layout, label, and fallback. */
+.bloom-canvas{position:absolute;display:block;pointer-events:none;background:#050607}
+.bloom-canvas--scene{pointer-events:auto;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.bloom-tree.bloom-painted>*{visibility:hidden}

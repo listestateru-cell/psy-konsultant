@@ -236,8 +236,15 @@
   window.FukushuMobile = {refresh, sync, closeMore, setAudioExpanded};
   refresh();
   // Existing direct pages can receive this optional UI without restarting an import.
+  if (enhancementSource && !document.querySelector('script[src*="/bloom-canvas.js"]')) {
+    const painter = document.createElement('script');
+    painter.src = new URL('bloom-canvas.js?v=bloom-shapes-20261107', enhancementSource).href;
+    painter.async = false;
+    painter.onload = () => window.PSUHBloom?.refresh?.();
+    document.body.append(painter);
+  }
   if (enhancementSource) for (const [name, version] of [
-    ['slide-away', 'slide-away-20261107'], ['bloom-garden', 'bloom-20261107']
+    ['slide-away', 'slide-away-20261107'], ['bloom-garden', 'bloom-shapes-20261107']
   ]) {
     if (document.querySelector(`script[src*="/${name}.js"]`)) continue;
     const asset = suffix => new URL(`${name}.${suffix}?v=${version}`, enhancementSource).href;

@@ -1,4 +1,5 @@
-/* Reveal earned growth once in view. No timers, model calls, or progress writes. */
+/* Reveal earned growth once in view. No timers, model calls, or progress writes.
+   Canvas painting (bloom-canvas.js) is optional: without it the SVG stays as is. */
 (() => {
   'use strict';
   if (window.PSUHBloom) return;
@@ -6,15 +7,19 @@
   const prepared = new WeakSet();
   const seen = new Map();
   let frame = 0;
+  const painter = () => window.PSUBloomCanvas;
+  const keyOf = svg => svg.dataset.bloomKey || `${svg.dataset.species}:${svg.dataset.seed}`;
   function reveal(svg) {
-    if (!svg.isConnected || reduced.matches) return;
-    const key = svg.dataset.bloomKey || `${svg.dataset.species}:${svg.dataset.seed}`;
+    if (!svg.isConnected) return;
+    if (reduced.matches) { painter()?.show(svg); return; }
+    const key = keyOf(svg);
     const growth = Number(svg.dataset.growth);
     const previous = seen.get(key);
     if (Number.isFinite(growth)) seen.set(key, growth);
     if (seen.size > 32) seen.delete(seen.keys().next().value);
-    if (previous == null) svg.classList.add('bloom-reveal');
-    else if (growth > previous) svg.classList.add('bloom-grew');
+    if (previous == null) { svg.classList.add('bloom-reveal'); painter()?.play(svg, 0, growth); }
+    else if (growth > previous) { svg.classList.add('bloom-grew'); painter()?.play(svg, previous, growth); }
+    else painter()?.show(svg);
   }
   const observer = typeof IntersectionObserver === 'function' ? new IntersectionObserver(entries => {
     for (const entry of entries) if (entry.isIntersecting) {
@@ -24,10 +29,16 @@
   }, {threshold: .2}) : null;
   function refresh() {
     document.querySelectorAll('.scene > svg.bloom-tree[data-scene="true"]').forEach(svg => {
-      if (prepared.has(svg)) return;
+      if (prepared.has(svg)) { painter()?.mount(svg); return; }
       prepared.add(svg);
+      // Холст до показа стоит на той точке, с которой начнётся рост.
+      const growth = Number(svg.dataset.growth), previous = seen.get(keyOf(svg));
+      painter()?.mount(svg, {from: reduced.matches || !Number.isFinite(growth) ? growth
+        : previous == null ? 0 : Math.min(previous, growth)});
       if (observer) observer.observe(svg); else reveal(svg);
     });
+    // Миниатюры стадий и коллекции — статичный кадр, без анимации.
+    if (painter()) document.querySelectorAll('svg.bloom-tree[data-scene="false"]').forEach(svg => painter().mount(svg));
   }
   function schedule() {
     if (frame) return;
@@ -54,6 +65,7 @@
   const quiet = () => {
     if (reduced.matches) document.querySelectorAll('.bloom-reveal,.bloom-grew').forEach(svg => {
       svg.classList.remove('bloom-reveal', 'bloom-grew');
+      painter()?.show(svg);
     });
   };
   reduced.addEventListener?.('change', quiet);
