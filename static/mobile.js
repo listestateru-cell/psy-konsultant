@@ -4,6 +4,7 @@
   if (window.FukushuMobile) return;
   const root = document.documentElement;
   const body = document.body;
+  const enhancementSource = document.currentScript?.src;
   const narrow = window.matchMedia('(max-width: 767px), (max-width: 1023px) and (pointer: coarse)');
   const views = ['home', 'study', 'practice', 'glossary', 'stats', 'errors', 'dojo', 'search'];
   const nav = document.getElementById('mobile-nav');
@@ -109,7 +110,8 @@
     if (observedAudio !== dock && typeof ResizeObserver !== 'undefined') {
       observedAudio = dock;
       new ResizeObserver(() => {
-        const space = dock.hidden ? 0 : Math.ceil(dock.getBoundingClientRect().height);
+        const tucked = window.PSUHSlideAway?.isHidden?.('audio');
+        const space = dock.hidden || tucked ? 0 : Math.ceil(dock.getBoundingClientRect().height);
         root.style.setProperty('--audio-space', `${space}px`);
       }).observe(dock);
     }
@@ -187,6 +189,7 @@
     refresh();
   });
   document.addEventListener('focusout', () => { refresh(); setTimeout(refresh, 180); });
+  window.addEventListener('psuhope:slideaway', refresh);
   window.addEventListener('resize', refresh, {passive: true});
   window.addEventListener('orientationchange', refresh, {passive: true});
   window.visualViewport?.addEventListener('resize', refresh, {passive: true});
@@ -232,4 +235,18 @@
   }
   window.FukushuMobile = {refresh, sync, closeMore, setAudioExpanded};
   refresh();
+  // Existing direct pages can receive this optional UI without restarting an import.
+  if (enhancementSource && !document.querySelector('script[src*="/slide-away.js"]')) {
+    const asset = name => new URL(name + '?v=slide-away-20261107', enhancementSource).href;
+    if (!document.querySelector('link[href*="/slide-away.css"]')) {
+      const style = document.createElement('link');
+      style.rel = 'stylesheet';
+      style.href = asset('slide-away.css');
+      document.head.append(style);
+    }
+    const controller = document.createElement('script');
+    controller.src = asset('slide-away.js');
+    controller.defer = true;
+    document.body.append(controller);
+  }
 })();

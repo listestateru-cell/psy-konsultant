@@ -1,0 +1,31 @@
+/* A panel can leave the reading surface without replacing its input or media nodes. */
+.sa-shell{position:relative;min-width:0;max-width:100%;overflow:hidden;overflow:clip;isolation:isolate}
+.sa-panel{min-width:0;max-width:100%;transform:translateX(var(--sa-drag,0px));opacity:1;transition:transform 190ms cubic-bezier(.2,.75,.25,1),opacity 160ms ease}
+.sa-shell.sa-leaving>.sa-panel{transform:translateX(calc(100% + 18px));opacity:0;pointer-events:none}
+.sa-shell.sa-tucked{min-height:44px}
+.sa-shell.sa-tucked>.sa-panel{position:absolute;inset:0;visibility:hidden;pointer-events:none}
+.sa-handle,.sa-restore{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;min-width:44px;box-sizing:border-box;margin:0;padding:8px 12px;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);font:inherit;font-size:13px;line-height:1.35;cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:pan-y;flex:0 0 auto}
+.sa-handle{display:flex;margin:0 0 10px auto;color:var(--mute);background:transparent;border-color:transparent}
+.sa-handle svg,.sa-restore svg{display:block;flex:0 0 18px;width:18px;height:18px;color:var(--acc)}
+.sa-handle:active,.sa-restore:active{background:var(--soft)}
+.sa-handle:focus-visible,.sa-restore:focus-visible{outline:3px solid var(--acc);outline-offset:-3px}
+.sa-handle:disabled{opacity:.5;cursor:default}
+.sa-restore[hidden],.sa-rail[hidden]{display:none!important}
+.sa-inline-restore{position:relative;float:right;max-width:100%;margin-left:auto}
+.sa-inline-restore>span,.sa-rail .sa-restore>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sa-fixed{overflow:hidden;overflow:clip;transition:opacity 170ms ease}
+.sa-fixed>.sa-handle{display:flex!important;position:absolute;right:6px;top:1px;z-index:2;width:44px;margin:0;padding:10px;border-radius:11px}
+.audio-dock.sa-fixed.mobile-audio-collapsed>.sa-handle{display:flex!important}
+.sa-fixed>.sa-handle>span{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.sa-fixed .mobile-audio-toggle{padding-right:52px}
+.sa-fixed .audio-name{padding-right:44px}
+.sa-fixed>:not(.sa-handle){transform:translateX(var(--sa-drag,0px));transition:transform 190ms cubic-bezier(.2,.75,.25,1),opacity 160ms ease}
+.sa-fixed.sa-leaving{opacity:0;pointer-events:none}
+.sa-fixed.sa-leaving>:not(.sa-handle){transform:translateX(calc(100% + 18px));opacity:0}
+.sa-fixed.sa-tucked{max-height:0!important;min-height:0!important;padding-block:0!important;border-width:0!important;visibility:hidden;pointer-events:none}
+.sa-dragging>.sa-panel,.sa-fixed.sa-dragging>:not(.sa-handle){transition:none!important}
+.sa-rail{position:fixed;right:max(8px,env(safe-area-inset-right,0px));bottom:calc(var(--mobile-nav-space,0px) + var(--mobile-keyboard-offset,0px) + var(--audio-space,0px) + 14px);z-index:34;display:flex;flex-direction:column;align-items:flex-end;gap:8px;max-width:min(190px,calc(100vw - 32px));pointer-events:none}
+.sa-rail .sa-restore{max-width:100%;min-height:48px;padding:10px 13px;border-radius:16px 8px 8px 16px;background:var(--surface-glass,var(--card));box-shadow:var(--shadow);pointer-events:auto}
+body.mobile-more-open .sa-rail{display:none}
+@media(hover:hover){.sa-handle:not(:disabled):hover,.sa-restore:hover{background:var(--soft);color:var(--ink)}}
+@media(prefers-reduced-motion:reduce){.sa-panel,.sa-fixed,.sa-fixed>:not(.sa-handle){transition:none!important}}
