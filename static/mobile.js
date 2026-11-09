@@ -259,4 +259,46 @@
     controller.defer = true;
     document.body.append(controller);
   }
+  // Полка дисциплин для прямой страницы, чей PAGE ещё в памяти процесса до перезапуска.
+  // В новой странице есть homeShelf и свой тег bookshelf.js — тогда мост ничего не делает.
+  function shelfBridge() {
+    const original = window.loadHome;
+    if (typeof original !== 'function' || original.psuShelfBridge || !window.PSUBookshelf) return;
+    const subjects = () => { try { return typeof SUBJ !== 'undefined' && Array.isArray(SUBJ) ? SUBJ : []; } catch (_) { return []; } };
+    const action = (id, name) => {
+      const subject = subjects().find(item => item.id === Number(id));
+      if (!subject) return;
+      if (name === 'study' && subject.cards) return startSession('due', subject.id, 0);
+      if (name === 'terms' && subject.terms) return startSession('due', subject.id, 1);
+      if (name === 'lectures') return pickLecture(subject.id);
+      if (name === 'stats') return openStats(subject.id);
+    };
+    const mount = () => {
+      const grid = document.querySelector('#v-home .subject-grid');
+      if (!grid) return;
+      const title = document.getElementById('home-subjects-title');
+      if (title) title.textContent = 'Моя полка';
+      const shelf = document.createElement('div');
+      shelf.id = 'bookshelf';
+      grid.replaceWith(shelf);
+      window.PSUBookshelf.render(shelf, subjects(), {action});
+    };
+    const patched = async function (...args) { const result = await original.apply(this, args); mount(); return result; };
+    patched.psuShelfBridge = true;
+    window.loadHome = patched;
+    mount();
+  }
+  if (enhancementSource && typeof window.homeShelf !== 'function' && !document.querySelector('script[src*="/bookshelf.js"]')) {
+    if (!document.querySelector('link[href*="/bookshelf.css"]')) {
+      const style = document.createElement('link');
+      style.rel = 'stylesheet';
+      style.href = new URL('bookshelf.css?v=bookshelf-20261109', enhancementSource).href;
+      document.head.append(style);
+    }
+    const shelf = document.createElement('script');
+    shelf.src = new URL('bookshelf.js?v=bookshelf-20261109', enhancementSource).href;
+    shelf.async = false;
+    shelf.onload = shelfBridge;
+    document.body.append(shelf);
+  }
 })();
