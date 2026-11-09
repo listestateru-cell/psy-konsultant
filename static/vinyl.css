@@ -102,6 +102,39 @@
 .vinyl-study:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
 @media (hover: hover) and (pointer: fine) { .vinyl-study:hover { text-decoration: underline; text-underline-offset: 3px; } }
 
+/* Презентация продолжает страницу лекции и оставляет общий плеер на месте. */
+.presentation-launch {
+  min-height: 44px; margin-top: 4px; padding: 8px 14px;
+  border: 1px solid var(--line); border-radius: 10px; background: var(--soft);
+}
+.lecture-presentation {
+  box-sizing: border-box; width: min(100%, 820px); min-width: 0;
+  margin-top: 8px; padding-top: 16px; border-top: 1px solid var(--line);
+  scroll-margin-top: 16px;
+}
+.lecture-presentation [hidden] { display: none; }
+.presentation-head, .presentation-tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
+.presentation-head h3 { margin: 0; font-size: clamp(18px, 4.7vw, 22px); }
+.presentation-head h3:focus { outline: none; }
+.presentation-note { margin: 8px 0 12px; line-height: 1.5; }
+.presentation-frame {
+  display: grid; place-items: center; aspect-ratio: 16 / 10; overflow: hidden;
+  background: var(--bg); border: 1px solid var(--line); border-radius: 12px;
+}
+.presentation-frame img { display: block; width: 100%; height: 100%; min-height: 0; object-fit: contain; }
+.presentation-frame p { margin: 16px; color: var(--mute); text-align: center; }
+.presentation-pager {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 8px; align-items: center; margin-top: 12px; text-align: center;
+}
+.presentation-pager span { color: var(--mute); font-size: 14px; font-variant-numeric: tabular-nums; }
+.presentation-pager .btn { padding-inline: 6px; overflow-wrap: anywhere; }
+.presentation-tools { margin-top: 8px; }
+.presentation-tools a { box-sizing: border-box; display: inline-grid; place-items: center; text-decoration: none; }
+.lecture-presentation .btn { min-height: 44px; text-align: center; }
+.lecture-presentation .btn[aria-pressed="true"] { border-color: var(--acc); color: var(--acc); background: var(--soft); }
+.lecture-presentation .btn:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
+
 /* ---------- пластинка в развёрнутом плеере ---------- */
 .audio-vinyl { display: flex; justify-content: center; padding: 10px 0 4px; }
 .audio-vinyl .vinyl-hit { border-radius: 50%; }
