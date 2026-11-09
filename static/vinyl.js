@@ -79,11 +79,9 @@
     if (position) position.before(slot); else panel.append(slot);
   }
 
-  // iOS 26 (WebKit 295518): в приложении с экрана «Домой» <audio> бывает «играет»,
-  // а время стоит и звука нет; чаще всего после внешней паузы (вынули наушник,
-  // звонок). Пластинка крутится, только когда время правда идёт. Застряло —
-  // следующий тап пересоздаёт источник (audioRecoverPlay). Не помогло и это —
-  // подсказываем Safari: там этой ошибки нет.
+  // У <audio> бывает состояние «играет», хотя время стоит и звука нет.
+  // Следим за временем и по следующему тапу вызываем восстановление плеера.
+  // Одного застывшего тайм-кода недостаточно, чтобы установить причину сбоя.
   const STUCK_MS = 3500;
   const watch = {id: 0, time: NaN, at: 0, stuck: false, rescues: 0};
   let watchTimer = 0;
@@ -118,7 +116,7 @@
     }
   }
   const NOTES = ['Звук не идёт. Нажми на пластинку, я перезапущу запись.',
-    'iPhone не отдаёт звук (ошибка iOS). Нажми на пластинку ещё раз или открой лекцию в Safari.',
+    'Звук пока не запускается. Нажми на пластинку ещё раз.',
     'Перезапускаю звук…'];
   function notify(a, text) {
     a.notice = text;
@@ -130,7 +128,7 @@
   function rescue(a, el) {
     watch.rescues += 1;
     watch.stuck = false; watch.time = NaN; watch.at = Date.now();
-    // audioRecoverPlay пересоздаёт источник только для застрявшего звука.
+    // Восстановление запускается по нажатию, когда звук застрял.
     a.stalled = true;
     a.stalledAt = Number(el?.currentTime) || a.stalledAt || 0;
     audioRecoverPlay();
@@ -140,7 +138,7 @@
     const a = au(), el = audioEl();
     const id = target === 'current' ? Number(a?.lecture_id) : Number(target);
     if (!Number.isSafeInteger(id) || id < 1) return;
-    if (a && a.lecture_id === id && a.ready && frozen(id) && typeof audioRecoverPlay === 'function') { rescue(a, el); return; }
+    if (a && a.lecture_id === id && a.ready && (frozen(id) || a.stalled) && typeof audioRecoverPlay === 'function') { rescue(a, el); return; }
     if (a && a.lecture_id === id && a.ready && el && !el.paused) { el.pause(); return; }
     if (a && a.lecture_id === id && a.ready && typeof audioResume === 'function') { audioResume(); return; }
     if (typeof audioOpen === 'function') audioOpen(id, true);
@@ -264,7 +262,7 @@
 
     // Запись продолжает вести штатный плеер. Слайды только читают его время.
     const a = au(), el = audioEl();
-    if (fullLecture(id, a) && a.ready && frozen(id) && typeof audioRecoverPlay === 'function') rescue(a, el);
+    if (fullLecture(id, a) && a.ready && (frozen(id) || a.stalled) && typeof audioRecoverPlay === 'function') rescue(a, el);
     else if (!(fullLecture(id, a) && (a.ready && el && !el.paused && !el.ended || a.loading && a.shouldPlay))) audioOpen(id, true);
     loadPresentation(p);
   }
@@ -298,7 +296,7 @@
   function paint() {
     const a = au(), el = audioEl();
     const current = Number(a?.lecture_id) || 0;
-    const stuck = frozen(current);
+    const stuck = frozen(current) || !!a?.stalled;
     const playing = !!(current && el && !el.paused && !el.ended) && !stuck;
     const loading = !!(current && a?.loading);
     const time = current && a?.ready ? position(a, el) : null;
@@ -320,9 +318,7 @@
       const state = v.querySelector('[data-vinyl-state]');
       if (state) {
         const heard = Number(v.dataset.vinylHeard) || 0;
-        state.textContent = own && stuck ? (watch.rescues > 0
-          ? 'iPhone не отдаёт звук: это ошибка iOS в приложении с экрана «Домой». Нажми ещё раз или открой лекцию в Safari'
-          : 'Звук не идёт. Нажми на пластинку, я перезапущу запись')
+        state.textContent = own && stuck ? NOTES[watch.rescues > 0 ? 1 : 0]
           : own && playing ? 'Играет. Нажми, чтобы поставить на паузу'
           : own && loading ? 'Открываю запись…'
           : own && a?.ready ? 'Пауза. Нажми на пластинку, чтобы продолжить'
@@ -347,11 +343,14 @@
     dock();
     const el = audioEl();
     if (el && !el.dataset.vinylBound) {
-      for (const type of ['play', 'playing', 'pause', 'ended', 'emptied', 'error', 'waiting', 'loadedmetadata', 'durationchange', 'seeked']) el.addEventListener(type, paint);
-      el.addEventListener('timeupdate', onTime);
-      el.addEventListener('play', () => { watch.time = Number(el.currentTime) || 0; watch.at = Date.now(); watchStart(); });
-      el.addEventListener('playing', watchStart);
-      for (const type of ['pause', 'ended', 'emptied', 'error']) el.addEventListener(type, watchStop);
+      // После замены плеера старый элемент ещё может прислать события.
+      // Они не должны останавливать наблюдение за новой записью.
+      const current = callback => event => { if (event.currentTarget === audioEl()) callback(event); };
+      for (const type of ['play', 'playing', 'pause', 'ended', 'emptied', 'error', 'waiting', 'loadedmetadata', 'durationchange', 'seeked']) el.addEventListener(type, current(paint));
+      el.addEventListener('timeupdate', current(onTime));
+      el.addEventListener('play', current(() => { watch.time = Number(el.currentTime) || 0; watch.at = Date.now(); watchStart(); }));
+      el.addEventListener('playing', current(watchStart));
+      for (const type of ['pause', 'ended', 'emptied', 'error']) el.addEventListener(type, current(watchStop));
       el.dataset.vinylBound = '1';
     }
     paint();

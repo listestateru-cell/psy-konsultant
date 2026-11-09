@@ -2,7 +2,7 @@
 'use strict';
 const ROOT_URL = new URL('./', self.registration.scope);
 const CACHE_PREFIX = 'fukushu-shell-' + encodeURIComponent(ROOT_URL.pathname) + '-';
-const CACHE_NAME = CACHE_PREFIX + '146a7c531e0342d227c0';
+const CACHE_NAME = CACHE_PREFIX + '9f1a7c18d5f181b4ede7';
 const PRECACHE = ["./", "./manifest.webmanifest", "./static/THIRD_PARTY_NOTICES.txt", "./static/app.css", "./static/bloom-canvas.js", "./static/bloom-garden.css", "./static/bloom-garden.js", "./static/bookshelf.css", "./static/bookshelf.js", "./static/chunks/chunk-3P3NBJ43.js", "./static/chunks/chunk-3P3NBJ43.js.LEGAL.txt", "./static/connection.js", "./static/effects-image.js", "./static/effects-image.js.LEGAL.txt", "./static/effects.css", "./static/effects.js", "./static/effects.js.LEGAL.txt", "./static/fast.js", "./static/glass.css", "./static/glass.js", "./static/icons/icon-180.png", "./static/icons/icon-192.png", "./static/icons/icon-512.png", "./static/icons/icon.svg", "./static/install.css", "./static/lecture-search.css", "./static/lecture-search.js", "./static/mobile.css", "./static/mobile.js", "./static/search-playback.js", "./static/slide-away.css", "./static/slide-away.js", "./static/study-sync.js", "./static/telegram-web-app.js", "./static/vinyl.css", "./static/vinyl.js"];
 const SHELL_URL = ROOT_URL.href;
 const ASSET_URLS = new Set(PRECACHE.filter(path => path !== './').map(path => new URL(path, ROOT_URL).href));
