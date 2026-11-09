@@ -201,3 +201,29 @@
   .psu-reader.is-open { animation: psb-fade .2s var(--ease-out); }
 }
 @keyframes psb-fade { from { opacity: 0; } }
+
+/* ---------- оглавление лекций: продолжение раскрытой книги ---------- */
+.lecture-chapters {
+  --paper: #f4ecdb; --paper-ink: #2f2923; --paper-mute: #7a6f60;
+  padding: 8px 20px 8px 24px; border: 0; border-radius: 3px 10px 10px 3px; overflow: visible;
+  background: linear-gradient(90deg, rgba(60, 45, 25, .14), transparent 4%), var(--paper); color: var(--paper-ink);
+  box-shadow: 3px 0 0 -1px #e7ddc7, 5px 1px 0 -2px #d9cdb3, 7px 2px 0 -3px #cfc2a6, 0 24px 56px -28px rgba(12, 10, 8, .55);
+}
+.lecture-chapters .lecture-list-entry + .lecture-list-entry { border-top: 1px solid rgba(58, 50, 42, .14); }
+.lecture-chapter.lecture-list-item {
+  display: grid; grid-template-columns: 92px minmax(0, 1fr) 20px; grid-template-areas: "no title arrow" ". meta arrow";
+  align-items: baseline; gap: 4px 14px; min-height: 0; padding: 17px 4px 17px 2px;
+  color: var(--paper-ink); background: transparent; border-radius: 6px;
+}
+.lecture-chapter .chapter-no { grid-area: no; font-family: ui-serif, "New York", Georgia, serif; font-size: 14px; font-style: italic; color: var(--paper-mute); white-space: nowrap; }
+.lecture-chapter .chapter-title { grid-area: title; min-width: 0; font-family: ui-serif, "New York", Georgia, serif; font-size: 18px; font-weight: 600; line-height: 1.28; overflow-wrap: anywhere; }
+.lecture-chapter .chapter-meta { grid-area: meta; font-size: 12.5px; color: var(--paper-mute); }
+.lecture-chapter svg { grid-area: arrow; align-self: center; color: #9a6a33; }
+.lecture-chapter.lecture-list-item:active { background: rgba(160, 110, 50, .1); }
+.lecture-chapter.lecture-list-item:focus-visible { outline: 2px solid #9a6a33; outline-offset: -2px; }
+@media (hover: hover) and (pointer: fine) { .lecture-chapter.lecture-list-item:hover { background: rgba(160, 110, 50, .08); } }
+@media (max-width: 600px) {
+  .lecture-chapters { padding: 4px 14px 4px 16px; }
+  .lecture-chapter.lecture-list-item { grid-template-columns: minmax(0, 1fr) 20px; grid-template-areas: "no arrow" "title arrow" "meta arrow"; gap: 3px 10px; padding: 15px 2px; }
+  .lecture-chapter .chapter-title { font-size: 17px; }
+}

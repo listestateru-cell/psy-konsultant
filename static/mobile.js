@@ -292,7 +292,7 @@
     if (!document.querySelector('link[href*="/bookshelf.css"]')) {
       const style = document.createElement('link');
       style.rel = 'stylesheet';
-      style.href = new URL('bookshelf.css?v=bookshelf-20261109b', enhancementSource).href;
+      style.href = new URL('bookshelf.css?v=bookshelf-20261109c', enhancementSource).href;
       document.head.append(style);
     }
     const shelf = document.createElement('script');

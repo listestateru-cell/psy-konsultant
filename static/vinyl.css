@@ -1,0 +1,114 @@
+/* PSU Hope · пластинка лекции: конверт на странице лекции и винил в развёрнутом плеере. */
+@import url("https://fonts.googleapis.com/css2?family=Marck+Script&display=swap");
+
+.psu-vinyl {
+  --ease-out: cubic-bezier(.23, 1, .32, 1);
+  --sleeve: #2d3238; --sleeve-ink: #f0e4c8; --accent: #d9a45c;
+  --vs: clamp(220px, 64vw, 300px);
+  position: relative;
+}
+.vinyl-hit {
+  display: block; margin: 0 auto; padding: 0; border: 0; background: none; color: inherit; font: inherit;
+  cursor: pointer; -webkit-tap-highlight-color: transparent; border-radius: 22%;
+}
+.vinyl-hit:focus { outline: none; }
+.vinyl-hit:focus-visible { outline: 3px solid var(--acc); outline-offset: 6px; }
+
+/* ---------- пластинка ---------- */
+.vinyl-record {
+  position: absolute; display: block; aspect-ratio: 1; border-radius: 50%;
+  container-type: inline-size; transition: transform .45s var(--ease-out);
+}
+.vinyl-disc {
+  position: absolute; inset: 0; display: block; border-radius: 50%;
+  background:
+    radial-gradient(circle, transparent 0 31%, rgba(0, 0, 0, .55) 31.4% 32.6%, transparent 33%),
+    radial-gradient(circle, transparent 0 46%, rgba(255, 255, 255, .05) 46.4% 46.9%, transparent 47.3% 63%, rgba(255, 255, 255, .05) 63.4% 63.9%, transparent 64.3%),
+    repeating-radial-gradient(circle, #131313 0 .9px, #1d1d1d .9px 1.8px),
+    #161616;
+  box-shadow: 0 10px 24px -8px rgba(0, 0, 0, .6), inset 0 0 0 1px rgba(255, 255, 255, .07), inset 0 0 0 3px #0d0d0d;
+  animation: psb-vinyl-spin 1.8s linear infinite; animation-play-state: paused;
+}
+.psu-vinyl.is-playing .vinyl-disc { animation-play-state: running; }
+@keyframes psb-vinyl-spin { to { transform: rotate(360deg); } }
+.vinyl-label {
+  position: absolute; inset: 33%; display: grid; place-items: center; border-radius: 50%;
+  background:
+    radial-gradient(circle, transparent 0 9%, rgba(0, 0, 0, .25) 9.5% 11%, transparent 11.5%),
+    radial-gradient(circle at 38% 32%, color-mix(in srgb, var(--accent) 70%, #fff), var(--accent) 55%, color-mix(in srgb, var(--accent) 72%, #000));
+  color: #22180f; font-family: ui-serif, "New York", Georgia, serif;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .25);
+}
+.vinyl-label b { position: absolute; top: 57%; font-size: 8cqw; font-weight: 700; line-height: 1; }
+.vinyl-label small { position: absolute; top: 18%; font-family: system-ui, -apple-system, sans-serif; font-size: 2.6cqw; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; opacity: .75; }
+.vinyl-label i { position: absolute; top: 44%; right: 13%; font-size: 2.8cqw; font-style: italic; opacity: .7; }
+.vinyl-sheen {
+  position: absolute; inset: 0; display: block; border-radius: 50%; pointer-events: none;
+  background: conic-gradient(from 200deg, transparent 0 7%, rgba(255, 255, 255, .17) 12%, transparent 19% 50%, rgba(255, 255, 255, .11) 61%, transparent 68%);
+  -webkit-mask: radial-gradient(circle, transparent 0 33%, #000 33.5%); mask: radial-gradient(circle, transparent 0 33%, #000 33.5%);
+}
+.vinyl-hole { position: absolute; left: 50%; top: 50%; width: 3.6%; aspect-ratio: 1; transform: translate(-50%, -50%); border-radius: 50%; background: #0b0b0b; box-shadow: 0 0 0 1.5px rgba(255, 255, 255, .35); }
+
+/* ---------- конверт на странице лекции ---------- */
+.lecture-vinyl { display: grid; justify-items: center; gap: 14px; padding: 46px 20px 22px; margin-bottom: 16px; overflow: hidden; }
+.vinyl-sleeve { position: relative; display: block; width: var(--vs); aspect-ratio: 1; }
+.vinyl-back {
+  position: absolute; inset: 0; display: block; border-radius: 22%;
+  background:
+    radial-gradient(120% 90% at 20% 0%, color-mix(in srgb, var(--sleeve) 70%, #fff) 0%, transparent 55%),
+    linear-gradient(165deg, color-mix(in srgb, var(--sleeve) 88%, #fff), var(--sleeve) 45%, color-mix(in srgb, var(--sleeve) 78%, #000));
+  box-shadow: 0 26px 50px -24px rgba(0, 0, 0, .7), inset 0 1px 0 rgba(255, 255, 255, .16), inset 0 0 0 1px rgba(255, 255, 255, .06);
+}
+.vinyl-sleeve .vinyl-record { left: 9%; top: 5%; width: 82%; }
+.vinyl-pocket {
+  position: absolute; left: 0; right: 0; bottom: 0; display: block; height: 48%;
+  border-radius: 0 0 22% 22% / 0 0 46% 46%;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--sleeve) 82%, #fff), var(--sleeve) 38%, color-mix(in srgb, var(--sleeve) 85%, #000));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .2), 0 -8px 18px -10px rgba(0, 0, 0, .55);
+  -webkit-mask: radial-gradient(56% 30% at 50% 0, transparent 97%, #000 100%); mask: radial-gradient(56% 30% at 50% 0, transparent 97%, #000 100%);
+}
+.vinyl-sign {
+  position: absolute; left: 7%; bottom: 21%; max-width: 50%; overflow: hidden; white-space: nowrap; text-overflow: clip;
+  font-family: "Marck Script", "Snell Roundhand", "Segoe Script", cursive; font-size: calc(var(--vs) * var(--sign, .088)); line-height: 1.2;
+  color: var(--sleeve-ink); transform: rotate(-7deg); transform-origin: left bottom; opacity: .92;
+}
+.vinyl-sticker {
+  position: absolute; right: 7%; bottom: 13%; display: grid; justify-items: center; gap: 2px; width: 33%; padding: 3.2% 3% 2.6%;
+  background: #121212; color: #f2e9d8; text-align: center; text-transform: uppercase;
+  box-shadow: 0 0 0 1px #121212, inset 0 0 0 1px rgba(255, 255, 255, .78), 0 4px 10px -4px rgba(0, 0, 0, .6);
+  font-family: system-ui, -apple-system, "Helvetica Neue", sans-serif;
+}
+.vinyl-sticker b { font-size: calc(var(--vs) * .056); font-weight: 800; line-height: 1.05; letter-spacing: .02em; white-space: nowrap; }
+.vinyl-sticker small { max-width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: calc(var(--vs) * .023); font-weight: 650; letter-spacing: .04em; line-height: 1.2; }
+.psu-vinyl.is-playing .vinyl-sleeve .vinyl-record { transform: translateY(-17%); }
+.psu-vinyl.is-loading .vinyl-sleeve .vinyl-record { transform: translateY(-6%); }
+@media (hover: hover) and (pointer: fine) {
+  .vinyl-hit:hover .vinyl-sleeve .vinyl-record { transform: translateY(-5%); }
+  .psu-vinyl.is-playing .vinyl-hit:hover .vinyl-sleeve .vinyl-record { transform: translateY(-17%); }
+}
+.vinyl-hit:active .vinyl-sleeve { transform: scale(.985); }
+.vinyl-sleeve { transition: transform .16s var(--ease-out); }
+
+.vinyl-caption { display: grid; justify-items: center; gap: 4px; text-align: center; }
+.vinyl-state { color: var(--mute); font-size: 14px; }
+.vinyl-time { min-height: 1.3em; color: var(--ink); font-size: 19px; font-weight: 650; font-variant-numeric: tabular-nums; letter-spacing: .01em; }
+.vinyl-study { margin-top: 6px; padding: 6px 4px; border: 0; background: none; color: var(--acc); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; border-radius: 6px; }
+.vinyl-study:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) { .vinyl-study:hover { text-decoration: underline; text-underline-offset: 3px; } }
+
+/* ---------- пластинка в развёрнутом плеере ---------- */
+.audio-vinyl { display: flex; justify-content: center; padding: 10px 0 4px; }
+.audio-vinyl .vinyl-hit { border-radius: 50%; }
+.audio-vinyl .vinyl-record { position: relative; width: clamp(112px, 34vw, 150px); }
+.audio-vinyl .vinyl-hit:active .vinyl-record { transform: scale(.97); }
+.audio-dock .audio-vinyl + .audio-position { text-align: center; font-size: 15px; font-weight: 600; margin: 2px 4px 6px; }
+@media (max-width: 767px), (max-width: 1023px) and (pointer: coarse) {
+  .audio-dock:not(.mobile-audio-collapsed) { max-height: min(86dvh, calc(var(--mobile-visible-height, 100dvh) - var(--mobile-nav-space, 0px) - 18px)); overflow-y: auto; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vinyl-disc { animation: none; }
+  .vinyl-record, .vinyl-sleeve { transition: none; }
+  .psu-vinyl.is-playing .vinyl-sleeve .vinyl-record, .psu-vinyl.is-loading .vinyl-sleeve .vinyl-record { transform: none; }
+  .psu-vinyl.is-playing .vinyl-label { box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .25), 0 0 0 3px var(--acc); }
+}
