@@ -235,6 +235,13 @@
   }
   window.FukushuMobile = {refresh, sync, closeMore, setAudioExpanded};
   refresh();
+  // Быстрый показ обзора и оглавлений из прошлого ответа (static/fast.js), на обоих входах.
+  if (enhancementSource && !window.PSUFast && !document.querySelector('script[src*="/fast.js"]')) {
+    const fast = document.createElement('script');
+    fast.src = new URL('fast.js?v=fast-20261109', enhancementSource).href;
+    fast.async = false;
+    document.head.append(fast);
+  }
   // Existing direct pages can receive this optional UI without restarting an import.
   if (enhancementSource && !document.querySelector('script[src*="/bloom-canvas.js"]')) {
     const painter = document.createElement('script');
