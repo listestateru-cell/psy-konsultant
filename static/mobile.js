@@ -66,6 +66,80 @@
     document.getElementById('mobile-more-close')?.focus({preventScroll: true});
   }
 
+  // iOS 26: панель с position: fixed у нижнего края при прокрутке всей страницы
+  // уезжает вверх и повисает посреди экрана (WebKit 297779 и соседние отчёты).
+  // На iPhone и iPad прокручивается только main, а страница стоит, поэтому меню
+  // и плеер держатся у края. Код страницы зовёт window.scrollTo и читает
+  // window.scrollY: в этом режиме оба вызова уходят в main.
+  const device = typeof navigator === 'undefined' ? {} : navigator;
+  const appleTouch = /iP(hone|ad|od)/.test(`${device.platform || ''} ${device.userAgent || ''}`)
+    || (device.platform === 'MacIntel' && device.maxTouchPoints > 1);
+  const nativeScrollTo = typeof window.scrollTo === 'function' ? window.scrollTo.bind(window) : null;
+  let shellForced = null;
+  let shellOn = false;
+  let shellBridged = false;
+  let shellForwarded = null;
+  const pageScroller = () => document.scrollingElement || document.documentElement;
+  const shellMain = () => (shellOn ? document.querySelector('main') : null);
+
+  function bridgeShellScroll() {
+    if (shellBridged) return;
+    shellBridged = true;
+    window.scrollTo = function scrollTo(x, y) {
+      const main = shellMain();
+      if (!main) return nativeScrollTo ? nativeScrollTo(...arguments) : undefined;
+      const target = x && typeof x === 'object' ? x : {left: Number(x) || 0, top: Number(y) || 0};
+      if (typeof main.scrollTo === 'function') main.scrollTo(target);
+      else if (Number.isFinite(target.top)) main.scrollTop = target.top;
+    };
+    for (const name of ['scrollY', 'pageYOffset']) {
+      let owner = window, descriptor;
+      while (owner && !(descriptor = Object.getOwnPropertyDescriptor(owner, name))) owner = Object.getPrototypeOf(owner);
+      if (descriptor && descriptor.configurable === false) continue;
+      const native = descriptor?.get ? () => descriptor.get.call(window) : () => Number(pageScroller()?.scrollTop) || 0;
+      try {
+        Object.defineProperty(window, name, {
+          configurable: true, enumerable: true,
+          get: () => { const main = shellMain(); return main ? Number(main.scrollTop) || 0 : native(); },
+          set: () => {},
+        });
+      } catch (_) { /* Свойство не переопределяется: позиция читается как раньше. */ }
+    }
+  }
+
+  function updateScrollShell(keyboard) {
+    const main = document.querySelector('main');
+    const wanted = !!main && narrow.matches && (shellForced ?? appleTouch);
+    if (wanted !== shellOn) {
+      const scroller = pageScroller();
+      if (wanted) {
+        bridgeShellScroll();
+        const top = Number(scroller?.scrollTop) || 0;
+        shellOn = true;
+        root.classList.add('mobile-scroll-shell');
+        if (top) { main.scrollTop = top; nativeScrollTo?.(0, 0); }
+        if (shellForwarded !== main && typeof main.addEventListener === 'function') {
+          shellForwarded = main;
+          // Слушатели window.scroll (панели slide-away и другие) получают прокрутку main.
+          main.addEventListener('scroll', () => {
+            if (shellOn && typeof window.dispatchEvent === 'function' && typeof Event === 'function') window.dispatchEvent(new Event('scroll'));
+          }, {passive: true});
+        }
+      } else {
+        const top = Number(main?.scrollTop) || 0;
+        shellOn = false;
+        root.classList.remove('mobile-scroll-shell');
+        if (top) nativeScrollTo?.(0, top);
+      }
+    }
+    // Клавиатура могла сдвинуть неподвижную страницу. Поле закрыто — ставим её на место.
+    if (shellOn && !keyboard && !editable(document.activeElement)) {
+      const scroller = pageScroller();
+      const zoomed = (window.visualViewport?.scale || 1) > 1.01;
+      if (!zoomed && scroller && (Number(scroller.scrollTop) || Number(scroller.scrollLeft))) nativeScrollTo?.(0, 0);
+    }
+  }
+
   function updateViewport() {
     const viewport = window.visualViewport;
     const height = viewport ? viewport.height : window.innerHeight;
@@ -76,6 +150,7 @@
     if (keyboard) expandedAudio = false;
     body.classList.toggle('mobile-keyboard-open', keyboard);
     root.style.setProperty('--mobile-keyboard-offset', keyboard ? `${Math.round(obscured)}px` : '0px');
+    updateScrollShell(keyboard);
     body.dataset.mobile = narrow.matches ? 'true' : 'false';
     if (!narrow.matches) closeMore(false);
   }
@@ -233,7 +308,12 @@
     expandedAudio = !!value;
     refresh();
   }
-  window.FukushuMobile = {refresh, sync, closeMore, setAudioExpanded};
+  // scrollShell(true | false | null): включить, выключить или вернуть автоопределение iOS.
+  function scrollShell(value) {
+    shellForced = value === null || value === undefined ? null : !!value;
+    refresh();
+  }
+  window.FukushuMobile = {refresh, sync, closeMore, setAudioExpanded, scrollShell};
   refresh();
   // Быстрый показ обзора и оглавлений из прошлого ответа (static/fast.js), на обоих входах.
   if (enhancementSource && !window.PSUFast && !document.querySelector('script[src*="/fast.js"]')) {

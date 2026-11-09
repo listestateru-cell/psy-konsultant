@@ -229,10 +229,30 @@
   body.mobile-keyboard-open #mobile-nav { display: none; }
   body.mobile-keyboard-open .audio-dock { border-radius: 15px; }
   body.mobile-keyboard-open main { padding-bottom: calc(var(--audio-space, 0px) + var(--mobile-keyboard-offset) + 28px); }
+
+  /* iOS 26 сдвигает fixed-панели при прокрутке всей страницы. Класс ставит mobile.js
+     на iPhone и iPad: страница стоит, прокручивается main, меню и плеер остаются у края. */
+  html.mobile-scroll-shell, html.mobile-scroll-shell body { height: 100%; overflow: hidden; overscroll-behavior: none; }
+  html.mobile-scroll-shell body { min-height: 0; }
+  html.mobile-scroll-shell main {
+    height: 100%; max-width: none; margin: 0;
+    padding-left: max(16px, calc((100% - 608px) / 2)); padding-right: max(16px, calc((100% - 608px) / 2));
+    overflow-x: hidden; overflow-y: auto; overscroll-behavior-y: contain; -webkit-overflow-scrolling: touch;
+    scroll-padding-top: calc(var(--mobile-safe-top) + 12px);
+    scroll-padding-bottom: calc(var(--mobile-nav-space) + var(--audio-space, 0px) + 24px);
+  }
+  html.mobile-scroll-shell body.mobile-more-open main { overflow: hidden; }
+  /* Под часами: текст уходит под мягкую дымку, а не режется о край экрана. */
+  html.mobile-scroll-shell body::before {
+    content: ''; position: fixed; z-index: 16; top: 0; left: 0; right: 0;
+    height: var(--mobile-safe-top); pointer-events: none;
+    background: linear-gradient(to bottom, color-mix(in srgb, var(--bg) 92%, transparent), color-mix(in srgb, var(--bg) 62%, transparent));
+    -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  }
 }
 
 @media (max-width: 359px) {
-  main { padding-left: 12px; padding-right: 12px; }
+  main, html.mobile-scroll-shell main { padding-left: 12px; padding-right: 12px; }
   .box { padding: 16px; }
   .mobile-lecture-row, .audio-lesson-action { grid-template-columns: minmax(0, 1fr); }
   .lecture-actions { grid-template-columns: minmax(0, 1fr); }
