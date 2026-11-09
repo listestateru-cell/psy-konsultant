@@ -74,7 +74,7 @@
     const slot = document.createElement('div');
     slot.className = 'audio-vinyl psu-vinyl';
     slot.dataset.vinylLecture = 'current';
-    slot.innerHTML = `<button class="vinyl-hit" type="button" data-vinyl-toggle="current" aria-pressed="false" aria-label="Пауза или продолжить лекцию">${record('Ψ')}</button>`;
+    slot.innerHTML = `<button class="vinyl-hit" type="button" data-vinyl-toggle="current" aria-pressed="false" aria-label="Пауза или продолжить лекцию">${record('Ψ')}</button><a class="vinyl-safari" data-vinyl-safari hidden>Продолжить в Safari</a>`;
     const position = document.getElementById('audio-position');
     if (position) position.before(slot); else panel.append(slot);
   }
@@ -88,7 +88,19 @@
   const standalone = () => {
     try { return !!(window.matchMedia?.('(display-mode: standalone)')?.matches || window.navigator?.standalone === true); } catch (_) { return false; }
   };
-  const safariHref = () => (/^https:\/\//.test(location.href) ? 'x-safari-' + location.href : '');
+  function safariHref(a = au()) {
+    try {
+      const id = Number(a?.lecture_id), key = typeof KEY === 'string' ? KEY : '';
+      if (!Number.isSafeInteger(id) || id < 1 || !/^[A-Za-z0-9_-]{8,128}$/.test(key) || typeof API === 'undefined') return '';
+      const api = new URL(String(API), location.href);
+      const origin = window.FukushuConnection?.origin || location.origin;
+      if (api.protocol !== 'https:' || api.origin !== origin || api.username || api.password || api.search || api.hash || api.pathname !== `/api/${key}/`) return '';
+      if (/^(?:localhost|.*\.localhost|127(?:\.\d+){3}|0\.0\.0\.0|\[::1\])$/i.test(api.hostname)) return '';
+      const destination = new URL(`/u/${key}/`, api.origin);
+      destination.hash = `lecture-${id}`;
+      return 'x-safari-' + destination.href;
+    } catch (_) { return ''; }
+  }
   function frozen(id) { return !!(id && watch.stuck && watch.id === id); }
 
   function observe() {
@@ -111,13 +123,15 @@
     if (!watch.stuck && now - watch.at >= STUCK_MS) {
       watch.stuck = true;
       // Та же подсказка в строке плеера: у пластинки в плеере своей подписи нет.
-      notify(a, NOTES[watch.rescues > 0 ? 1 : 0]);
+      notify(a, watch.rescues > 0 ? retryNotice(a) : NOTES[0]);
       paint();
     }
   }
   const NOTES = ['Звук не идёт. Нажми на пластинку, я перезапущу запись.',
     'Звук пока не запускается. Нажми на пластинку ещё раз.',
-    'Перезапускаю звук…'];
+    'Перезапускаю звук…',
+    'Звук пока не запускается. Открой лекцию в Safari кнопкой ниже.'];
+  const retryNotice = a => standalone() && safariHref(a) ? NOTES[3] : NOTES[1];
   function notify(a, text) {
     a.notice = text;
     if (typeof audioDraw === 'function') try { audioDraw(); } catch (_) {}
@@ -311,14 +325,15 @@
       if (clock) clock.textContent = own ? text : '';
       const safari = v.querySelector('[data-vinyl-safari]');
       if (safari) {
-        const href = own && stuck && watch.rescues > 0 && standalone() ? safariHref() : '';
+        const href = own && stuck && watch.rescues > 0 && standalone() ? safariHref(a) : '';
         safari.hidden = !href;
-        if (href) safari.setAttribute('href', href);
+        safari.textContent = a?.playback_context === 'excerpt' || a?.clip || a?.excerpt ? 'Открыть полную лекцию в Safari' : 'Продолжить в Safari';
+        if (href) safari.setAttribute('href', href); else safari.removeAttribute('href');
       }
       const state = v.querySelector('[data-vinyl-state]');
       if (state) {
         const heard = Number(v.dataset.vinylHeard) || 0;
-        state.textContent = own && stuck ? NOTES[watch.rescues > 0 ? 1 : 0]
+        state.textContent = own && stuck ? (watch.rescues > 0 ? retryNotice(a) : NOTES[0])
           : own && playing ? 'Играет. Нажми, чтобы поставить на паузу'
           : own && loading ? 'Открываю запись…'
           : own && a?.ready ? 'Пауза. Нажми на пластинку, чтобы продолжить'
@@ -356,8 +371,16 @@
     paint();
   }
   document.addEventListener('click', event => {
-    const hit = event.target instanceof Element ? event.target.closest('[data-vinyl-toggle], [data-presentation-open], [data-presentation-action]') : null;
+    const hit = event.target instanceof Element ? event.target.closest('[data-vinyl-toggle], [data-presentation-open], [data-presentation-action], [data-vinyl-safari]') : null;
     if (!hit || hit.disabled) return;
+    if (hit.hasAttribute('data-vinyl-safari')) {
+      const href = safariHref();
+      if (hit.hidden || !href || hit.getAttribute('href') !== href) { event.preventDefault(); return; }
+      // Сохранение с keepalive переживёт переход. Сама ссылка открывается
+      // обычным нажатием, без ожидания сети и потери активации пользователя.
+      try { if (typeof audioSave === 'function') Promise.resolve(audioSave(true)).catch(() => {}); } catch (_) {}
+      return;
+    }
     event.preventDefault();
     if (hit.hasAttribute('data-presentation-open')) { openPresentation(hit); return; }
     if (hit.hasAttribute('data-presentation-action')) { presentationAction(hit); return; }

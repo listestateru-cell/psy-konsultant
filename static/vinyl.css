@@ -85,7 +85,7 @@
 /* Звук застрял (iOS): пластинка стоит, наполовину в конверте, подпись цветом акцента. */
 .psu-vinyl.is-stuck .vinyl-sleeve .vinyl-record { transform: translateY(-6%); }
 .psu-vinyl.is-stuck .vinyl-state { color: var(--acc); }
-.vinyl-safari { margin-top: 4px; padding: 6px 4px; color: var(--acc); font-size: 14px; font-weight: 650; text-decoration: underline; text-underline-offset: 3px; border-radius: 6px; }
+.vinyl-safari { display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; min-height: 44px; max-width: 100%; margin-top: 4px; padding: 10px 14px; border: 1px solid var(--line); background: var(--soft); color: var(--acc); font-size: 14px; font-weight: 650; text-align: center; text-decoration: none; border-radius: 10px; }
 .vinyl-safari[hidden] { display: none; }
 .vinyl-safari:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
 @media (hover: hover) and (pointer: fine) {
@@ -136,7 +136,8 @@
 .lecture-presentation .btn:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
 
 /* ---------- пластинка в развёрнутом плеере ---------- */
-.audio-vinyl { display: flex; justify-content: center; padding: 10px 0 4px; }
+.audio-vinyl { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 10px 0 4px; }
+.audio-dock.mobile-audio-collapsed > .audio-vinyl { display: none; }
 .audio-vinyl .vinyl-hit { border-radius: 50%; }
 .audio-vinyl .vinyl-record { position: relative; width: clamp(112px, 34vw, 150px); }
 .audio-vinyl .vinyl-hit:active .vinyl-record { transform: scale(.97); }
