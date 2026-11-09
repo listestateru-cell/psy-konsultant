@@ -519,7 +519,10 @@ function audioIOSSession(){try{if(typeof navigator==='undefined')return null;con
 function audioSessionWake(a=AU,el=audioElement(),passive=false){const session=audioIOSSession();if(!session||AU!==a||!a||audioVoiceActive())return;const pending=AUDIO_SESSION_WAKE,now=Date.now();if(pending?.a===a&&pending.el===el||passive&&a.sessionWakeAt!=null&&now-a.sessionWakeAt<500)return;
  // WebKit 323104: an unchanged category can leave a restarted GPU audio session
  // silent. The second category must be sent in a new task; playback stays in tap.
- const wake={a,el};AUDIO_SESSION_WAKE=wake;a.sessionWakeAt=now;try{session.type='ambient'}catch(_){AUDIO_SESSION_WAKE=null;return}setTimeout(()=>{if(AUDIO_SESSION_WAKE!==wake)return;AUDIO_SESSION_WAKE=null;if(AU!==a||audioElement()!==el||audioVoiceActive())return;try{session.type='playback'}catch(_){}},0)}
+ // The intermediate category is 'auto', never 'ambient': ambient is muted by the
+ // Ring/Silent switch, and on iOS 26.1 a lecture started under it stayed silent
+ // while its time ran (10.11, silent switch at night). 'auto' plays media unmuted.
+ const wake={a,el};AUDIO_SESSION_WAKE=wake;a.sessionWakeAt=now;try{session.type='auto'}catch(_){AUDIO_SESSION_WAKE=null;return}setTimeout(()=>{if(AUDIO_SESSION_WAKE!==wake)return;AUDIO_SESSION_WAKE=null;if(AU!==a||audioElement()!==el||audioVoiceActive())return;try{session.type='playback'}catch(_){}},0)}
 function audioSessionRelease(){AUDIO_SESSION_WAKE=null;if(AU)delete AU.sessionWakeAt;const session=audioIOSSession();if(session)try{if(session.type!=='auto')session.type='auto'}catch(_){}}
 function audioSessionRestore(){if(AUDIO_SESSION_WAKE||audioVoiceActive())return;const session=audioIOSSession();if(session)try{if(session.type!=='playback')session.type='playback'}catch(_){}}
 function audioNativePlay(a=AU,el=audioElement()){audioSessionWake(a,el);const serial=a.nativePlaySerial=(a.nativePlaySerial||0)+1;a.nativePlayState='pending';let playing;try{playing=el.play()}catch(error){a.nativePlayState='rejected';throw error}return Promise.resolve(playing).then(result=>{if(AU===a&&a.nativePlaySerial===serial)a.nativePlayState='resolved';return result},error=>{if(AU===a&&a.nativePlaySerial===serial)a.nativePlayState='rejected';throw error})}
