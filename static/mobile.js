@@ -238,7 +238,7 @@
   // Existing direct pages can receive this optional UI without restarting an import.
   if (enhancementSource && !document.querySelector('script[src*="/bloom-canvas.js"]')) {
     const painter = document.createElement('script');
-    painter.src = new URL('bloom-canvas.js?v=bloom-shapes-20261107', enhancementSource).href;
+    painter.src = new URL('bloom-canvas.js?v=bloom-detail-20261108', enhancementSource).href;
     painter.async = false;
     painter.onload = () => window.PSUHBloom?.refresh?.();
     document.body.append(painter);
