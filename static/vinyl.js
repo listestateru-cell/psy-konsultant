@@ -50,7 +50,7 @@
     const label = `${ch.label}. ${ch.title}`;
     return `<section class="box lecture-vinyl" aria-label="Аудиолекция"><div class="psu-vinyl" data-vinyl-lecture="${Number(l.id)}" data-vinyl-heard="${heard}" style="--sleeve:${colors.sleeve};--sleeve-ink:${colors.ink};--accent:${colors.accent}">
 <button class="vinyl-hit" type="button" data-vinyl-toggle="${Number(l.id)}" aria-pressed="false" aria-label="${esc('Слушать: ' + label)}"><span class="vinyl-sleeve"><span class="vinyl-back"></span>${record(ch.number)}<span class="vinyl-pocket"><span class="vinyl-sign" style="--sign:${Math.min(.084, .98 / Math.max(1, signature(l.teacher, l.subject).length)).toFixed(3)}">${esc(signature(l.teacher, l.subject))}</span><span class="vinyl-sticker"><small>${esc(initials(l.teacher) || 'PSU Hope')}</small><b>${esc(ch.label)}</b><small>${esc(l.subject || '')}</small></span></span></span></button>
-<div class="vinyl-caption"><span class="vinyl-state" data-vinyl-state>${heard ? `Прослушано ${heard} мин. Нажми на пластинку, чтобы продолжить` : 'Нажми на пластинку, чтобы слушать'}</span><b class="vinyl-time" data-vinyl-time></b><button class="vinyl-study" type="button" onclick="audioStudy(${Number(l.id)},${Number(l.subject_id) || 0})">Слушать с вопросами по прослушанному</button></div>
+<div class="vinyl-caption"><span class="vinyl-state" data-vinyl-state>${heard ? `Прослушано ${heard} мин. Нажми на пластинку, чтобы продолжить` : 'Нажми на пластинку, чтобы слушать'}</span><b class="vinyl-time" data-vinyl-time></b><a class="vinyl-safari" data-vinyl-safari hidden>Открыть лекцию в Safari</a><button class="vinyl-study" type="button" onclick="audioStudy(${Number(l.id)},${Number(l.subject_id) || 0})">Слушать с вопросами по прослушанному</button></div>
 </div></section>`;
   }
 
@@ -66,10 +66,68 @@
     if (position) position.before(slot); else panel.append(slot);
   }
 
+  // iOS 26 (WebKit 295518): в приложении с экрана «Домой» <audio> бывает «играет»,
+  // а время стоит и звука нет; чаще всего после внешней паузы (вынули наушник,
+  // звонок). Пластинка крутится, только когда время правда идёт. Застряло —
+  // следующий тап пересоздаёт источник (audioRecoverPlay). Не помогло и это —
+  // подсказываем Safari: там этой ошибки нет.
+  const STUCK_MS = 3500;
+  const watch = {id: 0, time: NaN, at: 0, stuck: false, rescues: 0};
+  let watchTimer = 0;
+  const standalone = () => {
+    try { return !!(window.matchMedia?.('(display-mode: standalone)')?.matches || window.navigator?.standalone === true); } catch (_) { return false; }
+  };
+  const safariHref = () => (/^https:\/\//.test(location.href) ? 'x-safari-' + location.href : '');
+  function frozen(id) { return !!(id && watch.stuck && watch.id === id); }
+
+  function observe() {
+    const a = au(), el = audioEl(), id = Number(a?.lecture_id) || 0, now = Date.now();
+    if (id !== watch.id) Object.assign(watch, {id, time: NaN, at: now, stuck: false, rescues: 0});
+    if (!el || !id || !a?.ready) return;
+    const t = Number(el.currentTime) || 0;
+    // Пауза, перемотка, перезапуск и подгрузка данных — не застревание: отсчёт заново.
+    if (el.paused || el.ended || el.seeking || a.restoring || el.readyState < 3) { watch.time = t; watch.at = now; return; }
+    if (!Number.isFinite(watch.time) || Math.abs(t - watch.time) > .05) {
+      const advanced = Number.isFinite(watch.time);
+      watch.time = t; watch.at = now;
+      if (advanced && (watch.stuck || watch.rescues)) {
+        watch.stuck = false; watch.rescues = 0;
+        if (NOTES.includes(a.notice)) notify(a, '');
+        paint();
+      }
+      return;
+    }
+    if (!watch.stuck && now - watch.at >= STUCK_MS) {
+      watch.stuck = true;
+      // Та же подсказка в строке плеера: у пластинки в плеере своей подписи нет.
+      notify(a, NOTES[watch.rescues > 0 ? 1 : 0]);
+      paint();
+    }
+  }
+  const NOTES = ['Звук не идёт. Нажми на пластинку, я перезапущу запись.',
+    'iPhone не отдаёт звук (ошибка iOS). Нажми на пластинку ещё раз или открой лекцию в Safari.',
+    'Перезапускаю звук…'];
+  function notify(a, text) {
+    a.notice = text;
+    if (typeof audioDraw === 'function') try { audioDraw(); } catch (_) {}
+  }
+  function watchStart() { if (!watchTimer) watchTimer = setInterval(observe, 500); observe(); }
+  function watchStop() { if (watchTimer) { clearInterval(watchTimer); watchTimer = 0; } }
+
+  function rescue(a, el) {
+    watch.rescues += 1;
+    watch.stuck = false; watch.time = NaN; watch.at = Date.now();
+    // audioRecoverPlay пересоздаёт источник только для застрявшего звука.
+    a.stalled = true;
+    a.stalledAt = Number(el?.currentTime) || a.stalledAt || 0;
+    audioRecoverPlay();
+  }
+
   function toggle(target) {
     const a = au(), el = audioEl();
     const id = target === 'current' ? Number(a?.lecture_id) : Number(target);
     if (!Number.isSafeInteger(id) || id < 1) return;
+    if (a && a.lecture_id === id && a.ready && frozen(id) && typeof audioRecoverPlay === 'function') { rescue(a, el); return; }
     if (a && a.lecture_id === id && a.ready && el && !el.paused) { el.pause(); return; }
     if (a && a.lecture_id === id && a.ready && typeof audioResume === 'function') { audioResume(); return; }
     if (typeof audioOpen === 'function') audioOpen(id, true);
@@ -86,21 +144,32 @@
   function paint() {
     const a = au(), el = audioEl();
     const current = Number(a?.lecture_id) || 0;
-    const playing = !!(current && el && !el.paused && !el.ended);
+    const stuck = frozen(current);
+    const playing = !!(current && el && !el.paused && !el.ended) && !stuck;
     const loading = !!(current && a?.loading);
     const time = current && a?.ready ? position(a, el) : null;
     const text = time ? `${fmt(time.now)}${time.total ? ' / ' + fmt(time.total) : ''}` : '';
     document.querySelectorAll('.psu-vinyl').forEach(v => {
       const own = v.dataset.vinylLecture === 'current' ? current > 0 : Number(v.dataset.vinylLecture) === current;
       v.classList.toggle('is-playing', own && playing);
-      v.classList.toggle('is-loading', own && loading && !playing);
+      v.classList.toggle('is-loading', own && loading && !playing && !stuck);
+      v.classList.toggle('is-stuck', own && stuck);
       v.querySelector('[data-vinyl-toggle]')?.setAttribute('aria-pressed', String(own && playing));
       const clock = v.querySelector('[data-vinyl-time]');
       if (clock) clock.textContent = own ? text : '';
+      const safari = v.querySelector('[data-vinyl-safari]');
+      if (safari) {
+        const href = own && stuck && watch.rescues > 0 && standalone() ? safariHref() : '';
+        safari.hidden = !href;
+        if (href) safari.setAttribute('href', href);
+      }
       const state = v.querySelector('[data-vinyl-state]');
       if (state) {
         const heard = Number(v.dataset.vinylHeard) || 0;
-        state.textContent = own && playing ? 'Играет. Нажми, чтобы поставить на паузу'
+        state.textContent = own && stuck ? (watch.rescues > 0
+          ? 'iPhone не отдаёт звук: это ошибка iOS в приложении с экрана «Домой». Нажми ещё раз или открой лекцию в Safari'
+          : 'Звук не идёт. Нажми на пластинку, я перезапущу запись')
+          : own && playing ? 'Играет. Нажми, чтобы поставить на паузу'
           : own && loading ? 'Открываю запись…'
           : own && a?.ready ? 'Пауза. Нажми на пластинку, чтобы продолжить'
           : heard ? `Прослушано ${heard} мин. Нажми на пластинку, чтобы продолжить` : 'Нажми на пластинку, чтобы слушать';
@@ -126,6 +195,9 @@
     if (el && !el.dataset.vinylBound) {
       for (const type of ['play', 'playing', 'pause', 'ended', 'emptied', 'error', 'waiting', 'loadedmetadata', 'durationchange', 'seeked']) el.addEventListener(type, paint);
       el.addEventListener('timeupdate', onTime);
+      el.addEventListener('play', () => { watch.time = Number(el.currentTime) || 0; watch.at = Date.now(); watchStart(); });
+      el.addEventListener('playing', watchStart);
+      for (const type of ['pause', 'ended', 'emptied', 'error']) el.addEventListener(type, watchStop);
       el.dataset.vinylBound = '1';
     }
     paint();
@@ -144,5 +216,5 @@
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind, {once: true}); else bind();
 
-  window.PSUVinyl = {lectureHtml, chapter, toggle, paint, bind, get text() { return lastText; }};
+  window.PSUVinyl = {lectureHtml, chapter, toggle, paint, bind, observe, get text() { return lastText; }, get stuck() { return watch.stuck; }};
 })();

@@ -82,6 +82,12 @@
 .vinyl-sticker small { max-width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: calc(var(--vs) * .023); font-weight: 650; letter-spacing: .04em; line-height: 1.2; }
 .psu-vinyl.is-playing .vinyl-sleeve .vinyl-record { transform: translateY(-17%); }
 .psu-vinyl.is-loading .vinyl-sleeve .vinyl-record { transform: translateY(-6%); }
+/* Звук застрял (iOS): пластинка стоит, наполовину в конверте, подпись цветом акцента. */
+.psu-vinyl.is-stuck .vinyl-sleeve .vinyl-record { transform: translateY(-6%); }
+.psu-vinyl.is-stuck .vinyl-state { color: var(--acc); }
+.vinyl-safari { margin-top: 4px; padding: 6px 4px; color: var(--acc); font-size: 14px; font-weight: 650; text-decoration: underline; text-underline-offset: 3px; border-radius: 6px; }
+.vinyl-safari[hidden] { display: none; }
+.vinyl-safari:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
 @media (hover: hover) and (pointer: fine) {
   .vinyl-hit:hover .vinyl-sleeve .vinyl-record { transform: translateY(-5%); }
   .psu-vinyl.is-playing .vinyl-hit:hover .vinyl-sleeve .vinyl-record { transform: translateY(-17%); }
@@ -109,6 +115,6 @@
 @media (prefers-reduced-motion: reduce) {
   .vinyl-disc { animation: none; }
   .vinyl-record, .vinyl-sleeve { transition: none; }
-  .psu-vinyl.is-playing .vinyl-sleeve .vinyl-record, .psu-vinyl.is-loading .vinyl-sleeve .vinyl-record { transform: none; }
+  .psu-vinyl.is-playing .vinyl-sleeve .vinyl-record, .psu-vinyl.is-loading .vinyl-sleeve .vinyl-record, .psu-vinyl.is-stuck .vinyl-sleeve .vinyl-record { transform: none; }
   .psu-vinyl.is-playing .vinyl-label { box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .25), 0 0 0 3px var(--acc); }
 }
