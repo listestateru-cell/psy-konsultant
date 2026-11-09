@@ -48,9 +48,10 @@
 <p class="presentation-note hint" role="status" data-presentation-status></p>
 <button class="btn sm" type="button" data-presentation-action="retry" hidden>Повторить загрузку</button>
 <div data-presentation-content hidden>
-<div class="presentation-frame"><img data-presentation-image alt="" decoding="async" referrerpolicy="no-referrer"><p data-presentation-blank hidden>Сейчас лектор говорит без слайда</p></div>
+<div class="presentation-frame" data-presentation-frame><img data-presentation-image alt="" decoding="async" referrerpolicy="no-referrer"><p data-presentation-blank hidden>Сейчас лектор говорит без слайда</p><span class="presentation-loading" aria-hidden="true">Загружаю слайд…</span></div>
 <p class="presentation-note hint" role="status" data-presentation-image-error hidden>Не удалось открыть слайд. <button class="btn sm" type="button" data-presentation-action="reload">Загрузить снова</button></p>
 <div class="presentation-pager" role="group" aria-label="Листать презентацию"><button class="btn sm" type="button" data-presentation-action="prev" aria-label="Предыдущий слайд">← Назад</button><span data-presentation-count aria-live="polite"></span><button class="btn sm" type="button" data-presentation-action="next" aria-label="Следующий слайд">Дальше →</button></div>
+<div class="presentation-strip" role="group" aria-label="Перейти к слайду" data-presentation-strip></div>
 <div class="presentation-tools"><button class="btn sm" type="button" data-presentation-action="follow" aria-pressed="false" hidden>Листать по аудио</button><a class="btn sm" data-presentation-full target="_blank" rel="noopener noreferrer">Увеличить слайд</a></div>
 </div>`;
   }
@@ -164,12 +165,76 @@
     return Number(a?.lecture_id) === id && a.playback_context !== 'excerpt' && !a.clip && !a.excerpt;
   }
 
+  // Слайд идёт с сервера около двух секунд, и листание ощущалось как зависание:
+  // счётчик уже «Слайд 7», а на экране ещё старый. Поэтому после открытия все
+  // слайды подгружаются заранее, по три за раз, сначала соседние с текущим.
+  // Сервер отдаёт их с кэшем на сутки, дальше листание мгновенное. Пока нужный
+  // не пришёл, старый слайд приглушён с подписью «Загружаю слайд…». Миниатюр
+  // нет намеренно: два десятка расжатых картинок в памяти iPhone и есть зависание.
+  const PRELOAD = 3;
+  const slideSrc = (p, page) => `${API}slide/${p.id}/${page}`;
+  function preloadSlides(p) {
+    if (presentation !== p || !p.pages.length) return;
+    const base = Number.isInteger(p.index) ? p.index : 0;
+    while (p.inflight < PRELOAD) {
+      let best = -1, distance = Infinity;
+      p.pages.forEach((page, i) => {
+        if (p.ready.has(page) || p.requested.has(page)) return;
+        const d = Math.abs(i - base) + (i < base ? .5 : 0);
+        if (d < distance) { distance = d; best = i; }
+      });
+      if (best < 0) return;
+      const page = p.pages[best], img = new Image();
+      p.requested.add(page);
+      p.inflight += 1;
+      const done = ok => {
+        img.onload = img.onerror = null;
+        p.inflight -= 1;
+        if (ok) slideReady(p, page);
+        preloadSlides(p);
+      };
+      img.onload = () => done(true);
+      img.onerror = () => done(false);
+      img.decoding = 'async';
+      img.referrerPolicy = 'no-referrer';
+      img.src = slideSrc(p, page);
+    }
+  }
+  function slideReady(p, page) {
+    p.ready.add(page);
+    if (p.pages[p.index] === page) p.frame.classList.remove('is-loading');
+  }
+  function stripHtml(p) {
+    return p.pages.map((page, i) => `<button type="button" class="presentation-chip" data-presentation-goto="${i}" aria-label="Слайд ${page}">${page}</button>`).join('');
+  }
+  function stripMark(p) {
+    p.strip.querySelectorAll('[data-presentation-goto]').forEach(chip => {
+      const i = Number(chip.dataset.presentationGoto);
+      chip.classList.toggle('is-current', i === p.index);
+      chip.classList.toggle('is-live', i === p.live);
+      if (i === p.index) chip.setAttribute('aria-current', 'true'); else chip.removeAttribute('aria-current');
+    });
+    const chip = p.strip.querySelector('.is-current');
+    // Только горизонтальная прокрутка ряда: страница по вертикали не прыгает.
+    if (chip && typeof p.strip.scrollTo === 'function' && p.strip.clientWidth) {
+      const left = chip.offsetLeft - (p.strip.clientWidth - chip.offsetWidth) / 2;
+      if (Math.abs(p.strip.scrollLeft - left) > 4) p.strip.scrollTo({left: Math.max(0, left), behavior: 'smooth'});
+    }
+  }
+  function browse(p, index) {
+    p.follow = false;
+    p.followButton.setAttribute('aria-pressed', 'false');
+    showSlide(p, index);
+    presentationSync();
+  }
+
   function showSlide(p, index) {
     const page = p.pages[index];
     if (!page && index !== null) return;
-    const src = page ? `${API}slide/${p.id}/${page}` : null;
+    const src = page ? slideSrc(p, page) : null;
     if (p.index === index && p.image.getAttribute('src') === src) return;
     p.index = index;
+    p.frame.classList.toggle('is-loading', !!page && !p.ready.has(page));
     p.imageError.hidden = true;
     p.image.hidden = !page;
     p.full.hidden = !page;
@@ -186,6 +251,8 @@
     p.count.textContent = page ? `Слайд ${page} из ${p.pages.at(-1)}` : 'Без слайда';
     p.prev.disabled = index === null || index === 0;
     p.next.disabled = index === p.pages.length - 1;
+    stripMark(p);
+    preloadSlides(p);
   }
 
   function presentationSync() {
@@ -194,16 +261,19 @@
     const a = au(), el = audioEl();
     const same = fullLecture(p.id, a);
     const matches = same && a.ready && a.media_id === p.mediaId;
-    if (p.follow && matches && el && !a.restoring && !el.seeking) {
+    if (matches && el && !a.restoring && !el.seeking) {
       const time = typeof audioTimelinePosition === 'function' ? audioTimelinePosition(a) : el.currentTime;
-      if (Number.isFinite(time)) {
+      if (Number.isFinite(time) && p.cues.length) {
         let low = 0, high = p.cues.length;
         while (low < high) {
           const middle = (low + high) >> 1;
           if (p.cues[middle].start <= time) low = middle + 1;
           else high = middle;
         }
-        showSlide(p, low ? p.cues[low - 1].index : p.video ? null : 0);
+        const live = low ? p.cues[low - 1].index : p.video ? null : 0;
+        // Где сейчас лектор, видно в ряду номеров и при ручном просмотре.
+        if (live !== p.live) { p.live = live; stripMark(p); }
+        if (p.follow) showSlide(p, live);
       }
     }
     const note = !p.cues.length ? 'Листай слайды вручную. Привязки к записи пока нет.'
@@ -239,9 +309,11 @@
       p.follow = p.cues.length > 0;
       p.followButton.hidden = !p.follow;
       p.followButton.setAttribute('aria-pressed', String(p.follow));
+      p.strip.innerHTML = p.pages.length > 1 ? stripHtml(p) : '';
       p.content.hidden = false;
       presentationSync();
       if (p.index === -1) showSlide(p, 0);
+      preloadSlides(p);
     } catch (_) {
       if (presentation !== p || !p.panel.isConnected) return;
       p.status.textContent = 'Не получилось открыть презентацию. Попробуй ещё раз.';
@@ -264,11 +336,27 @@
     panel.innerHTML = presentationHtml(id);
     const query = name => panel.querySelector(`[data-presentation-${name}]`);
     const action = name => panel.querySelector(`[data-presentation-action="${name}"]`);
-    const p = presentation = {id, panel, button, index: -1, pages: [],
+    const p = presentation = {id, panel, button, index: -1, live: undefined, pages: [],
+      ready: new Set(), requested: new Set(), inflight: 0,
       content: query('content'), status: query('status'), image: query('image'), imageError: query('image-error'),
       full: query('full'), count: query('count'), blank: query('blank'), retry: action('retry'),
+      frame: query('frame'), strip: query('strip'),
       followButton: action('follow'), prev: action('prev'), next: action('next')};
     p.content.hidden = true;
+    // Свайп по слайду листает так же, как кнопки; запись при этом идёт дальше.
+    let touch = null;
+    p.frame.addEventListener('touchstart', event => {
+      const t = event.changedTouches?.[0];
+      touch = t ? {x: t.clientX, y: t.clientY} : null;
+    }, {passive: true});
+    p.frame.addEventListener('touchend', event => {
+      const t = event.changedTouches?.[0], start = touch;
+      touch = null;
+      if (!t || !start || presentation !== p || !p.pages.length) return;
+      const dx = t.clientX - start.x, dy = t.clientY - start.y;
+      if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+      browse(p, Math.min(p.pages.length - 1, Math.max(0, (Number.isInteger(p.index) ? p.index : -1) + (dx < 0 ? 1 : -1))));
+    }, {passive: true});
     panel.hidden = false;
     button.setAttribute('aria-expanded', 'true');
     panel.querySelector('h3').focus({preventScroll: true});
@@ -293,6 +381,7 @@
       p.image.src = p.full.href;
       return;
     }
+    if (button.hasAttribute('data-presentation-goto')) { browse(p, Number(button.dataset.presentationGoto)); return; }
     p.follow = action === 'follow' && !p.follow;
     p.followButton.setAttribute('aria-pressed', String(p.follow));
     if (action === 'prev' || action === 'next') showSlide(p, p.index === null ? 0 : p.index + (action === 'prev' ? -1 : 1));
@@ -371,7 +460,7 @@
     paint();
   }
   document.addEventListener('click', event => {
-    const hit = event.target instanceof Element ? event.target.closest('[data-vinyl-toggle], [data-presentation-open], [data-presentation-action], [data-vinyl-safari]') : null;
+    const hit = event.target instanceof Element ? event.target.closest('[data-vinyl-toggle], [data-presentation-open], [data-presentation-action], [data-presentation-goto], [data-vinyl-safari]') : null;
     if (!hit || hit.disabled) return;
     if (hit.hasAttribute('data-vinyl-safari')) {
       const href = safariHref();
@@ -383,16 +472,29 @@
     }
     event.preventDefault();
     if (hit.hasAttribute('data-presentation-open')) { openPresentation(hit); return; }
-    if (hit.hasAttribute('data-presentation-action')) { presentationAction(hit); return; }
+    if (hit.hasAttribute('data-presentation-action') || hit.hasAttribute('data-presentation-goto')) { presentationAction(hit); return; }
     toggle(hit.dataset.vinylToggle);
     setTimeout(paint, 60);
   });
   for (const type of ['timeupdate', 'loadedmetadata', 'seeked', 'playing', 'pause', 'loadstart', 'emptied', 'error']) {
     document.addEventListener(type, event => {
       if (event.target === audioEl()) presentationSync();
-      if (type === 'error' && event.target === presentation?.image && presentation.index !== null) presentation.imageError.hidden = false;
+      if (type === 'error' && event.target === presentation?.image && presentation.index !== null) {
+        presentation.imageError.hidden = false;
+        presentation.frame.classList.remove('is-loading');
+      }
     }, true);
   }
+  document.addEventListener('load', event => {
+    const p = presentation;
+    if (p && event.target === p.image && p.pages[p.index]) slideReady(p, p.pages[p.index]);
+  }, true);
+  document.addEventListener('keydown', event => {
+    const p = presentation;
+    if (!p?.pages.length || !['ArrowLeft', 'ArrowRight'].includes(event.key) || !p.panel.contains(document.activeElement)) return;
+    event.preventDefault();
+    browse(p, Math.min(p.pages.length - 1, Math.max(0, (Number.isInteger(p.index) ? p.index : -1) + (event.key === 'ArrowRight' ? 1 : -1))));
+  });
   // Страница перерисовывает лекцию целиком; новая пластинка сразу получает текущее состояние.
   if (typeof MutationObserver === 'function') {
     const view = document.getElementById('v-study');
