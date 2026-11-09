@@ -476,9 +476,9 @@
 
   // ---------- раскрытая книга ----------
   const CHAPTERS = [
+    {action: 'lectures', title: 'Лекции', note: 'Аудио, разбор и задания по каждой'},
     {action: 'study', title: 'Учить', note: 'Повторы по графику и новые карточки'},
     {action: 'terms', title: 'Термины', note: 'Понятия дисциплины и их определения'},
-    {action: 'lectures', title: 'Лекции', note: 'Аудио, разбор и задания по каждой'},
     {action: 'stats', title: 'Статистика', note: 'Что уже освоено и где ошибки'},
   ];
   const ROMAN = ['I', 'II', 'III', 'IV'];
