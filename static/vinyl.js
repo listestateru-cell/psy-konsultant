@@ -52,7 +52,8 @@
 <p class="presentation-note hint" role="status" data-presentation-image-error hidden>Не удалось открыть слайд. <button class="btn sm" type="button" data-presentation-action="reload">Загрузить снова</button></p>
 <div class="presentation-pager" role="group" aria-label="Листать презентацию"><button class="btn sm" type="button" data-presentation-action="prev" aria-label="Предыдущий слайд">← Назад</button><span data-presentation-count aria-live="polite"></span><button class="btn sm" type="button" data-presentation-action="next" aria-label="Следующий слайд">Дальше →</button></div>
 <div class="presentation-strip" role="group" aria-label="Перейти к слайду" data-presentation-strip></div>
-<div class="presentation-tools"><button class="btn sm" type="button" data-presentation-action="follow" aria-pressed="false" hidden>Листать по аудио</button><a class="btn sm" data-presentation-full target="_blank" rel="noopener noreferrer">Увеличить слайд</a></div>
+<div class="presentation-tools"><button class="btn sm" type="button" data-presentation-action="follow" aria-pressed="false" hidden>Листать по аудио</button><a class="btn sm" data-presentation-full data-presentation-action="fullscreen" role="button" target="_blank" rel="noopener noreferrer">На весь экран</a></div>
+<p class="presentation-tip hint">Двойной тап по слайду — на весь экран, свайп — листать.</p>
 </div>`;
   }
 
@@ -80,11 +81,13 @@
     if (position) position.before(slot); else panel.append(slot);
   }
 
-  // У <audio> бывает состояние «играет», хотя время стоит и звука нет.
-  // Следим за временем и по следующему тапу вызываем восстановление плеера.
-  // Одного застывшего тайм-кода недостаточно, чтобы установить причину сбоя.
-  const STUCK_MS = 3500;
-  const watch = {id: 0, time: NaN, at: 0, stuck: false, rescues: 0};
+  // У <audio> на iOS бывает состояние «играет», хотя время стоит и звука нет.
+  // По логам 09–10.11 его снимают пауза и повторный запуск того же плеера
+  // (лекции 7, 19, 14 ожили так), а перезагрузка записи и страницы — нет.
+  // Поэтому: 2 с без движения → сами делаем паузу и запуск, до двух раз.
+  // Не ожило — подсказка, тап делает то же руками, следующий тап перезагружает запись.
+  const STUCK_MS = 2000, NUDGES = 2;
+  const watch = {id: 0, time: NaN, at: 0, stuck: false, rescues: 0, nudges: 0};
   let watchTimer = 0;
   const standalone = () => {
     try { return !!(window.matchMedia?.('(display-mode: standalone)')?.matches || window.navigator?.standalone === true); } catch (_) { return false; }
@@ -106,7 +109,7 @@
 
   function observe() {
     const a = au(), el = audioEl(), id = Number(a?.lecture_id) || 0, now = Date.now();
-    if (id !== watch.id) Object.assign(watch, {id, time: NaN, at: now, stuck: false, rescues: 0});
+    if (id !== watch.id) Object.assign(watch, {id, time: NaN, at: now, stuck: false, rescues: 0, nudges: 0});
     if (!el || !id || !a?.ready) return;
     const t = Number(el.currentTime) || 0;
     // Пауза, перемотка, перезапуск и подгрузка данных — не застревание: отсчёт заново.
@@ -114,14 +117,17 @@
     if (!Number.isFinite(watch.time) || Math.abs(t - watch.time) > .05) {
       const advanced = Number.isFinite(watch.time);
       watch.time = t; watch.at = now;
-      if (advanced && (watch.stuck || watch.rescues)) {
-        watch.stuck = false; watch.rescues = 0;
-        if (NOTES.includes(a.notice)) notify(a, '');
+      if (advanced && (watch.stuck || watch.rescues || watch.nudges || a.stalled)) {
+        watch.stuck = false; watch.rescues = 0; watch.nudges = 0;
+        // Звук пошёл: снимаем и свою отметку, и отметку 15-секундного сторожа страницы.
+        if (a.stalled) { a.stalled = false; a.stalledAt = null; }
+        if (NOTES.includes(a.notice) || /^Звук не запускается/.test(a.notice || '')) notify(a, '');
         paint();
       }
       return;
     }
     if (!watch.stuck && now - watch.at >= STUCK_MS) {
+      if (watch.nudges < NUDGES && typeof audioResume === 'function') { nudge(a, el); return; }
       watch.stuck = true;
       // Та же подсказка в строке плеера: у пластинки в плеере своей подписи нет.
       notify(a, watch.rescues > 0 ? retryNotice(a) : NOTES[0]);
@@ -140,10 +146,26 @@
   function watchStart() { if (!watchTimer) watchTimer = setInterval(observe, 500); observe(); }
   function watchStop() { if (watchTimer) { clearInterval(watchTimer); watchTimer = 0; } }
 
+  // Пауза и запуск того же элемента. Плеер уже запускался нажатием, поэтому
+  // iOS разрешает повторный play() без нового жеста.
+  function nudge(a, el) {
+    watch.nudges += 1;
+    watch.at = Date.now();
+    try { el.pause(); } catch (_) {}
+    setTimeout(() => {
+      if (au() !== a || audioEl() !== el || !el.paused) return;
+      watch.time = Number(el.currentTime) || 0;
+      watch.at = Date.now();
+      try { Promise.resolve(audioResume()).catch(() => {}); } catch (_) {}
+    }, 300);
+  }
+
   function rescue(a, el) {
     watch.rescues += 1;
     watch.stuck = false; watch.time = NaN; watch.at = Date.now();
-    // Восстановление запускается по нажатию, когда звук застрял.
+    // Первый тап по застрявшей пластинке — пауза и запуск, как руками; помогает чаще всего.
+    if (watch.rescues === 1 && el && typeof audioResume === 'function') { nudge(a, el); return; }
+    // Дальше — перезагрузка записи с того же места.
     a.stalled = true;
     a.stalledAt = Number(el?.currentTime) || a.stalledAt || 0;
     audioRecoverPlay();
@@ -228,6 +250,158 @@
     presentationSync();
   }
 
+  // ---------- Слайд на весь экран ----------
+  // Двойной тап по маленькому слайду раскрывает его на весь экран. Если телефон
+  // держат вертикально, слайд повёрнут направо (поверните телефон набок); если
+  // экран уже горизонтальный, поворота нет. Слайды по-прежнему идут за лектором.
+  // Свайп в сторону сворачивает, двумя пальцами — увеличить и двигать,
+  // двойной тап — увеличить или вернуть.
+  let full = null;
+  const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+  function fullEnsure() {
+    if (full?.root.isConnected) return full;
+    const root = document.createElement('div');
+    root.className = 'slide-full';
+    root.hidden = true;
+    root.setAttribute('role', 'dialog');
+    root.setAttribute('aria-modal', 'true');
+    root.setAttribute('aria-label', 'Слайд на весь экран');
+    root.innerHTML = `<div class="slide-full-rot"><div class="slide-full-stage"><img class="slide-full-img" alt="" decoding="async" referrerpolicy="no-referrer" draggable="false"><p class="slide-full-blank" hidden>Сейчас лектор говорит без слайда</p></div>
+<div class="slide-full-bar"><button type="button" class="slide-full-btn" data-full-action="prev" aria-label="Предыдущий слайд">←</button><span class="slide-full-count" data-full-count></span><button type="button" class="slide-full-btn" data-full-action="next" aria-label="Следующий слайд">→</button><button type="button" class="slide-full-btn" data-full-action="follow" aria-pressed="false">За лектором</button><button type="button" class="slide-full-btn" data-full-action="close" aria-label="Свернуть презентацию">✕</button></div>
+<p class="slide-full-hint" aria-hidden="true">Свайп в сторону — свернуть. Двумя пальцами — увеличить.</p></div>`;
+    document.body.append(root);
+    const q = s => root.querySelector(s);
+    full = {root, stage: q('.slide-full-stage'), img: q('.slide-full-img'), blank: q('.slide-full-blank'), count: q('[data-full-count]'),
+      prev: q('[data-full-action="prev"]'), next: q('[data-full-action="next"]'), follow: q('[data-full-action="follow"]'),
+      scale: 1, tx: 0, ty: 0, rotated: false, openedAt: 0, src: null};
+    fullGestures(full);
+    return full;
+  }
+  const fullOpen = () => !!(full && !full.root.hidden);
+  function fullLayout(f) {
+    const w = window.innerWidth || document.documentElement.clientWidth, h = window.innerHeight || document.documentElement.clientHeight;
+    f.rotated = h > w;
+    f.root.classList.toggle('is-rotated', f.rotated);
+    f.root.style.setProperty('--full-w', `${w}px`);
+    f.root.style.setProperty('--full-h', `${h}px`);
+    fullZoom(f, 1, 0, 0);
+  }
+  function fullZoom(f, scale, tx, ty) {
+    const w = f.stage.clientWidth, h = f.stage.clientHeight;
+    f.scale = clamp(scale, 1, 5);
+    f.tx = clamp(tx, w * (1 - f.scale), 0);
+    f.ty = clamp(ty, h * (1 - f.scale), 0);
+    f.img.style.transform = f.scale > 1.001 ? `translate(${f.tx}px, ${f.ty}px) scale(${f.scale})` : '';
+    f.root.classList.toggle('is-zoomed', f.scale > 1.001);
+  }
+  function fullSync(p = presentation) {
+    if (!fullOpen() || !p) return;
+    const f = full, page = p.pages[p.index];
+    const src = page ? slideSrc(p, page) : null;
+    if (src !== f.src) {
+      f.src = src;
+      fullZoom(f, 1, 0, 0);
+      if (src) f.img.src = src; else f.img.removeAttribute('src');
+    }
+    f.img.hidden = !src;
+    f.blank.hidden = !!src;
+    f.count.textContent = p.count.textContent;
+    f.prev.disabled = p.prev.disabled;
+    f.next.disabled = p.next.disabled;
+    f.follow.hidden = p.followButton.hidden;
+    f.follow.setAttribute('aria-pressed', String(!!p.follow));
+  }
+  function openFull(p) {
+    if (!p?.pages.length || presentation !== p) return;
+    const f = fullEnsure();
+    if (fullOpen()) return;
+    f.root.hidden = false;
+    f.openedAt = Date.now();
+    f.src = undefined;
+    document.body.classList.add('slide-full-open');
+    fullLayout(f);
+    fullSync(p);
+    f.root.querySelector('[data-full-action="close"]').focus({preventScroll: true});
+  }
+  function closeFull() {
+    if (!fullOpen()) return;
+    fullZoom(full, 1, 0, 0);
+    full.root.hidden = true;
+    document.body.classList.remove('slide-full-open');
+    presentation?.frame?.focus?.({preventScroll: true});
+  }
+  function fullAction(name) {
+    const p = presentation;
+    if (!p || Date.now() - (full?.openedAt || 0) < 350) return;   // «призрачный» клик от двойного тапа
+    if (name === 'close') { closeFull(); return; }
+    if (name === 'follow') { presentationAction(p.followButton); fullSync(p); return; }
+    const base = Number.isInteger(p.index) ? p.index : -1;
+    if (name === 'prev' || name === 'next') browse(p, clamp(base + (name === 'next' ? 1 : -1), 0, p.pages.length - 1));
+  }
+  function fullGestures(f) {
+    // Точка экрана → координаты повёрнутого слайда (поворот на 90° по часовой).
+    const point = t => {
+      const w = window.innerWidth || 0;
+      const x = f.rotated ? t.clientY : t.clientX, y = f.rotated ? w - t.clientX : t.clientY;
+      return {x: x - f.stage.offsetLeft, y: y - f.stage.offsetTop};
+    };
+    const mid = (a, b) => ({x: (a.x + b.x) / 2, y: (a.y + b.y) / 2});
+    const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y) || 1;
+    let g = null, lastTap = null;
+    f.stage.addEventListener('touchstart', event => {
+      f.lastTouch = Date.now();
+      const ts = event.touches;
+      if (ts.length >= 2) {
+        const a = point(ts[0]), b = point(ts[1]), m = mid(a, b);
+        g = {pinch: true, multi: true, d0: dist(a, b), s0: f.scale, anchor: {x: (m.x - f.tx) / f.scale, y: (m.y - f.ty) / f.scale}};
+      } else if (ts.length === 1) {
+        const p0 = point(ts[0]);
+        g = {pinch: false, multi: false, p0, last: p0, t0: {x: f.tx, y: f.ty}, at: Date.now()};
+      }
+    }, {passive: true});
+    f.stage.addEventListener('touchmove', event => {
+      if (!g) return;
+      const ts = event.touches;
+      if (g.pinch && ts.length >= 2) {
+        const a = point(ts[0]), b = point(ts[1]), m = mid(a, b), s = clamp(g.s0 * dist(a, b) / g.d0, 1, 5);
+        fullZoom(f, s, m.x - g.anchor.x * s, m.y - g.anchor.y * s);
+      } else if (!g.pinch && ts.length === 1) {
+        g.last = point(ts[0]);
+        if (f.scale > 1.001) fullZoom(f, f.scale, g.t0.x + g.last.x - g.p0.x, g.t0.y + g.last.y - g.p0.y);
+      }
+      if (event.cancelable) event.preventDefault();
+    }, {passive: false});
+    f.stage.addEventListener('touchend', event => {
+      if (!g) return;
+      if (event.touches.length) {
+        // Один палец остался после щипка — продолжаем двигать, но не закрываем.
+        if (event.touches.length === 1) { const p0 = point(event.touches[0]); g = {pinch: false, multi: true, p0, last: p0, t0: {x: f.tx, y: f.ty}, at: Date.now()}; }
+        return;
+      }
+      const done = g;
+      g = null;
+      if (done.pinch || done.multi) return;
+      const dx = done.last.x - done.p0.x, dy = done.last.y - done.p0.y;
+      if (f.scale <= 1.001 && Math.abs(dx) >= 70 && Math.abs(dx) > Math.abs(dy) * 1.3) { closeFull(); return; }
+      if (Math.abs(dx) < 10 && Math.abs(dy) < 10 && Date.now() - done.at < 300) {
+        const now = Date.now(), here = done.p0;
+        if (lastTap && now - lastTap.at < 320 && Math.hypot(here.x - lastTap.x, here.y - lastTap.y) < 30) {
+          lastTap = null;
+          if (f.scale > 1.001) fullZoom(f, 1, 0, 0);
+          else fullZoom(f, 2.5, here.x - here.x * 2.5, here.y - here.y * 2.5);
+        } else lastTap = {at: now, x: here.x, y: here.y};
+      }
+    }, {passive: true});
+    f.stage.addEventListener('touchcancel', () => { g = null; }, {passive: true});
+    f.stage.addEventListener('dblclick', event => {
+      // Двойной тап, открывший экран, и касания пальцем дают ещё и системный dblclick: его не считаем.
+      if (Date.now() - f.openedAt < 700 || Date.now() - (f.lastTouch || 0) < 1000) return;
+      const here = point(event);
+      if (f.scale > 1.001) fullZoom(f, 1, 0, 0); else fullZoom(f, 2.5, here.x - here.x * 2.5, here.y - here.y * 2.5);
+    });
+  }
+  window.addEventListener('resize', () => { if (fullOpen()) { fullLayout(full); fullSync(); } });
+
   function showSlide(p, index) {
     const page = p.pages[index];
     if (!page && index !== null) return;
@@ -253,6 +427,7 @@
     p.next.disabled = index === p.pages.length - 1;
     stripMark(p);
     preloadSlides(p);
+    fullSync(p);
   }
 
   function presentationSync() {
@@ -322,6 +497,7 @@
   }
 
   function closePresentation(p) {
+    closeFull();
     presentation = null;
     p.panel.hidden = true;
     p.button.setAttribute('aria-expanded', 'false');
@@ -344,16 +520,23 @@
       followButton: action('follow'), prev: action('prev'), next: action('next')};
     p.content.hidden = true;
     // Свайп по слайду листает так же, как кнопки; запись при этом идёт дальше.
-    let touch = null;
+    // Двойной тап по слайду — на весь экран.
+    let touch = null, lastTap = 0;
     p.frame.addEventListener('touchstart', event => {
       const t = event.changedTouches?.[0];
-      touch = t ? {x: t.clientX, y: t.clientY} : null;
+      touch = t ? {x: t.clientX, y: t.clientY, at: Date.now()} : null;
     }, {passive: true});
+    p.frame.addEventListener('dblclick', () => { if (presentation === p) openFull(p); });
     p.frame.addEventListener('touchend', event => {
       const t = event.changedTouches?.[0], start = touch;
       touch = null;
       if (!t || !start || presentation !== p || !p.pages.length) return;
       const dx = t.clientX - start.x, dy = t.clientY - start.y;
+      if (Math.abs(dx) < 10 && Math.abs(dy) < 10 && Date.now() - start.at < 300) {
+        const now = Date.now();
+        if (now - lastTap < 320) { lastTap = 0; if (event.cancelable) event.preventDefault(); openFull(p); } else lastTap = now;
+        return;
+      }
       if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
       browse(p, Math.min(p.pages.length - 1, Math.max(0, (Number.isInteger(p.index) ? p.index : -1) + (dx < 0 ? 1 : -1))));
     }, {passive: true});
@@ -382,6 +565,7 @@
       return;
     }
     if (button.hasAttribute('data-presentation-goto')) { browse(p, Number(button.dataset.presentationGoto)); return; }
+    if (action === 'fullscreen') { openFull(p); return; }
     p.follow = action === 'follow' && !p.follow;
     p.followButton.setAttribute('aria-pressed', String(p.follow));
     if (action === 'prev' || action === 'next') showSlide(p, p.index === null ? 0 : p.index + (action === 'prev' ? -1 : 1));
@@ -460,7 +644,7 @@
     paint();
   }
   document.addEventListener('click', event => {
-    const hit = event.target instanceof Element ? event.target.closest('[data-vinyl-toggle], [data-presentation-open], [data-presentation-action], [data-presentation-goto], [data-vinyl-safari]') : null;
+    const hit = event.target instanceof Element ? event.target.closest('[data-vinyl-toggle], [data-presentation-open], [data-presentation-action], [data-presentation-goto], [data-full-action], [data-vinyl-safari]') : null;
     if (!hit || hit.disabled) return;
     if (hit.hasAttribute('data-vinyl-safari')) {
       const href = safariHref();
@@ -472,6 +656,7 @@
     }
     event.preventDefault();
     if (hit.hasAttribute('data-presentation-open')) { openPresentation(hit); return; }
+    if (hit.hasAttribute('data-full-action')) { fullAction(hit.dataset.fullAction); return; }
     if (hit.hasAttribute('data-presentation-action') || hit.hasAttribute('data-presentation-goto')) { presentationAction(hit); return; }
     toggle(hit.dataset.vinylToggle);
     setTimeout(paint, 60);
@@ -490,6 +675,11 @@
     if (p && event.target === p.image && p.pages[p.index]) slideReady(p, p.pages[p.index]);
   }, true);
   document.addEventListener('keydown', event => {
+    if (fullOpen()) {
+      if (event.key === 'Escape') { event.preventDefault(); closeFull(); }
+      else if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); full.openedAt = 0; fullAction(event.key === 'ArrowRight' ? 'next' : 'prev'); }
+      return;
+    }
     const p = presentation;
     if (!p?.pages.length || !['ArrowLeft', 'ArrowRight'].includes(event.key) || !p.panel.contains(document.activeElement)) return;
     event.preventDefault();
@@ -499,7 +689,7 @@
   if (typeof MutationObserver === 'function') {
     const view = document.getElementById('v-study');
     if (view) new MutationObserver(() => {
-      if (presentation && !presentation.panel.isConnected) presentation = null;
+      if (presentation && !presentation.panel.isConnected) { closeFull(); presentation = null; }
       const fresh = view.querySelectorAll('.psu-vinyl:not([data-vinyl-painted])');
       if (fresh.length) {
         fresh.forEach(v => { v.dataset.vinylPainted = '1'; });
@@ -509,5 +699,5 @@
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind, {once: true}); else bind();
 
-  window.PSUVinyl = {lectureHtml, chapter, toggle, paint, bind, observe, syncPresentation: presentationSync, get text() { return lastText; }, get stuck() { return watch.stuck; }};
+  window.PSUVinyl = {lectureHtml, chapter, toggle, paint, bind, observe, syncPresentation: presentationSync, openFull: () => openFull(presentation), closeFull, get fullOpen() { return fullOpen(); }, get text() { return lastText; }, get stuck() { return watch.stuck; }, get nudges() { return watch.nudges; }};
 })();

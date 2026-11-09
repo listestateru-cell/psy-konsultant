@@ -153,6 +153,57 @@
 @media (prefers-reduced-motion: reduce) {
   .presentation-frame img, .presentation-loading { transition: none; }
 }
+.presentation-tip { margin: 8px 0 0; font-size: 13px; }
+
+/* ---------- слайд на весь экран ---------- */
+/* Поверх всего, включая нижнее меню и плеер. Вертикальный экран — слайд
+   повёрнут на 90° по часовой (телефон кладут набок); горизонтальный — без поворота. */
+.slide-full {
+  position: fixed; inset: 0; z-index: 80; overflow: hidden;
+  background: #050505; color: #f3efe6; touch-action: none; overscroll-behavior: contain;
+}
+.slide-full[hidden] { display: none; }
+.slide-full-rot {
+  position: absolute; left: 0; top: 0; box-sizing: border-box;
+  width: var(--full-w, 100vw); height: var(--full-h, 100vh);
+  display: flex; flex-direction: column;
+  padding: 0 env(safe-area-inset-right, 0px) 0 env(safe-area-inset-left, 0px);
+}
+.slide-full.is-rotated .slide-full-rot {
+  width: var(--full-h, 100vh); height: var(--full-w, 100vw);
+  transform-origin: 0 0; transform: translateX(var(--full-w, 100vw)) rotate(90deg);
+  /* После поворота вырез экрана слева от слайда, полоска «домой» — справа. */
+  padding: 0 env(safe-area-inset-bottom, 0px) 0 env(safe-area-inset-top, 0px);
+}
+.slide-full-stage { position: relative; flex: 1 1 auto; min-height: 0; overflow: hidden; }
+.slide-full-img {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain;
+  transform-origin: 0 0; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+}
+.slide-full.is-zoomed .slide-full-img { will-change: transform; }
+.slide-full-blank { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; color: #b9b3a8; text-align: center; }
+.slide-full-blank[hidden], .slide-full-img[hidden] { display: none; }
+.slide-full-bar {
+  flex: 0 0 auto; display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 6px 12px 8px;
+}
+.slide-full-btn {
+  min-width: 44px; min-height: 40px; padding: 0 12px; border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, .18); background: rgba(255, 255, 255, .06);
+  color: inherit; font: inherit; font-size: 15px; cursor: pointer;
+}
+.slide-full-btn:disabled { opacity: .35; }
+.slide-full-btn[aria-pressed="true"] { border-color: var(--acc, #d9a45c); color: var(--acc, #d9a45c); }
+.slide-full-btn:focus-visible { outline: 2px solid var(--acc, #d9a45c); outline-offset: 2px; }
+.slide-full-count { min-width: 7.5em; text-align: center; font-size: 14px; font-variant-numeric: tabular-nums; opacity: .8; }
+.slide-full-hint {
+  position: absolute; top: 10px; left: 50%; transform: translateX(-50%); margin: 0;
+  padding: 5px 12px; border-radius: 999px; background: rgba(0, 0, 0, .6); font-size: 13px; white-space: nowrap;
+  pointer-events: none; animation: slide-full-hint 3.5s ease forwards;
+}
+@keyframes slide-full-hint { 0%, 70% { opacity: 1; } 100% { opacity: 0; } }
+body.slide-full-open, html.mobile-scroll-shell body.slide-full-open main { overflow: hidden; }
+@media (prefers-reduced-motion: reduce) { .slide-full-hint { animation: none; opacity: 0; } }
 .presentation-pager {
   display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   gap: 8px; align-items: center; margin-top: 12px; text-align: center;
