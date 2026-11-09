@@ -228,6 +228,8 @@ function studyMenu(){if(typeof WAITING_LECTURE!=='undefined')WAITING_LECTURE=nul
 // а когда всё начато — её самые слабые карточки
 // ---------- библиотека лекций ----------
 const LECTURE_LIBRARY={subject:0,query:'',scroll:0,focus:0};
+// Только что открытое оглавление: страница лекции берёт данные отсюда, а не тянет все лекции.
+let LECTURE_CACHE={at:0,list:[]};
 function lectureRoute(route){if(window.FukushuConnection)window.FukushuConnection.setRoute(route);else history.replaceState(null,'',location.pathname+location.search+'#'+route)}
 // «Тема 3. Телесный интеллект» → глава 3 «Телесный интеллект»; глоссарий — словарь книги.
 function lectureChapter(title){const text=String(title||'').trim(),numbered=text.match(/^(?:тема|лекция|занятие)\s*(\d+)\s*[.:)\-—–]?\s*/iu);if(numbered)return{label:'Глава '+Number(numbered[1]),title:text.slice(numbered[0].length).trim()||text};if(/^глоссарий/iu.test(text))return{label:'Словарь',title:'Глоссарий'};return{label:'Дополнительно',title:text}}
@@ -239,7 +241,7 @@ async function pickLecture(subject=0,restore=false){
  subject=Number(subject)||0;if(!await reviewBeforeSession())return;const nav=await tabOnly('study');if(nav==null)return;learnLeave();
  if(!restore||LECTURE_LIBRARY.subject!==subject)Object.assign(LECTURE_LIBRARY,{subject,query:'',scroll:0,focus:0});
  lectureRoute('lectures-'+subject);$('v-study').innerHTML='<div class="box loading-line" role="status" data-fx-busy="true" data-fx-state="searching">Загружаю лекции…</div>';
- try{const L=(await get('lectures'+(subject?'?subject='+subject:''))).lectures.filter(lectureAvailable);if(nav!==TKnav)return;
+ try{const L=(await get('lectures'+(subject?'?subject='+subject:''))).lectures.filter(lectureAvailable);LECTURE_CACHE={at:Date.now(),list:L};if(nav!==TKnav)return;
  const groups=[...new Set(L.map(l=>l.subject_id))],name=SUBJ.find(s=>s.id===subject)?.name||L[0]?.subject||'Лекции';
  $('v-study').innerHTML=`<div class="lecture-intro"><button class="btn sm lecture-back" onclick="tab('home')">${subject?'← К книге':'← К полке'}</button><span class="eyebrow">${subject?'Оглавление':'Библиотека'}</span><h2 id="lecture-library-title" tabindex="-1">${e(subject?name:'Мои лекции')}</h2>${subject?'':'<p class="hint">Выбери лекцию. Внутри — аудио, разбор и задания.</p>'}<label class="lecture-search"><span class="hint">Найти ${subject?'лекцию':'лекцию или дисциплину'}</span><input type="search" id="lecture-search" placeholder="По названию" value="${e(LECTURE_LIBRARY.query)}" oninput="filterLectures(this.value)"></label></div>
  ${groups.map(g=>`<section class="lecture-group" data-lecture-group="${g}">${subject?'':`<h3 class="lecture-group-title">${e(L.find(l=>l.subject_id===g)?.subject||'Материалы')}</h3>`}<ol class="lecture-list lecture-chapters">`+L.filter(l=>l.subject_id===g).sort(lectureOrder).map(l=>{const ch=lectureChapter(l.title);return `<li class="lecture-list-entry" data-lecture-search="${e((l.title+' '+l.subject+' '+ch.label+' '+(l.teacher||'')).toLocaleLowerCase('ru'))}"><button class="lecture-list-item lecture-chapter" type="button" data-lecture-id="${l.id}" onclick="openLectureDetails(${l.id},true)"><span class="chapter-no">${e(ch.label)}</span><span class="chapter-title">${e(ch.title)}</span>${l.teacher?`<span class="chapter-meta">${e(l.teacher)}</span>`:''}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></button></li>`}).join('')+'</ol></section>').join('')||'<p class="empty">Готовых лекций пока нет.</p>'}
@@ -252,7 +254,7 @@ async function openLectureDetails(id,fromList=false){
  id=Number(id);if(!Number.isSafeInteger(id)||id<1||!await reviewBeforeSession())return;
  if(fromList){LECTURE_LIBRARY.query=$('lecture-search')?.value||'';LECTURE_LIBRARY.scroll=window.scrollY;LECTURE_LIBRARY.focus=id}
  const nav=await tabOnly('study');if(nav==null)return;learnLeave();lectureRoute('lecture-'+id);$('v-study').innerHTML='<div class="box loading-line" role="status" data-fx-busy="true" data-fx-state="searching">Открываю лекцию…</div>';
- try{const l=(await get('lectures')).lectures.find(l=>l.id===id&&lectureAvailable(l));if(nav!==TKnav)return;
+ try{const fresh=Date.now()-LECTURE_CACHE.at<120000?LECTURE_CACHE.list.find(l=>l.id===id&&lectureAvailable(l)):null,scope=LECTURE_LIBRARY.subject;let l=fresh;if(!l&&scope)l=(await get('lectures?subject='+scope)).lectures.find(l=>l.id===id&&lectureAvailable(l));if(!l)l=(await get('lectures')).lectures.find(l=>l.id===id&&lectureAvailable(l));if(nav!==TKnav)return;
  if(!l){$('v-study').innerHTML='<div class="box"><h2>Лекция пока недоступна</h2><button class="btn" onclick="pickLecture(0)">К лекциям</button></div>';return}
  const back=fromList?LECTURE_LIBRARY.subject:(LECTURE_LIBRARY.focus===id?LECTURE_LIBRARY.subject:l.subject_id);if(!fromList&&LECTURE_LIBRARY.focus!==id)Object.assign(LECTURE_LIBRARY,{subject:back,query:'',scroll:0,focus:id});
  $('v-study').innerHTML=`<article class="lecture-overview"><header class="lecture-overview-head"><button class="btn sm lecture-back" onclick="lectureListBack(${back||0})">← К оглавлению</button><span class="eyebrow">${e(l.subject)} · ${e(lectureChapter(l.title).label)}</span><h2 id="lecture-title" tabindex="-1">${e(lectureChapter(l.title).title)}</h2></header>
